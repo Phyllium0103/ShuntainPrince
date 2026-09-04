@@ -1,0 +1,3433 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>順天太子會資料管理系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Lunar JavaScript 天文曆法庫 -->
+<script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
+<style>
+  :root{
+    --cover:#26231f;
+    --cover-line:#3c372f;
+    --paper:#f4eedd;
+    --paper-alt:#ece3ca;
+    --ink:#2b2620;
+    --ink-soft:#6b6152;
+    --rule:#cabf9d;
+    --seal:#a3363b;
+    --seal-dark:#832a2e;
+    --gold:#a9812f;
+    --ok-bg:#e7ecd9;
+    --base-scale: 1;
+    --print-scale-factor: 1;
+  }
+  *{box-sizing:border-box;}
+  html{ font-size: calc(16px * var(--base-scale)); }
+  body{margin:0;background:var(--cover);font-family:'Noto Sans TC',sans-serif;color:var(--ink);}
+  .app{display:flex;min-height:100vh;}
+
+  .cover{
+    width:calc(210px * var(--base-scale));flex-shrink:0;background:
+      repeating-linear-gradient(180deg,var(--cover) 0 2px, var(--cover-line) 2px 3px);
+    padding:calc(28px * var(--base-scale)) 0 calc(20px * var(--base-scale));display:flex;flex-direction:column;align-items:center;
+  }
+  .seal{
+    width:calc(64px * var(--base-scale));height:calc(64px * var(--base-scale));border-radius:50%;background:var(--seal);
+    display:flex;align-items:center;justify-content:center;
+    transform:rotate(-6deg);box-shadow:0 3px 8px rgba(0,0,0,.4), inset 0 0 0 2px rgba(255,255,255,.15);
+    margin-bottom:10px;
+  }
+  .seal span{font-family:'Noto Serif TC',serif;font-weight:900;color:#f4eedd;font-size:1.375rem;letter-spacing:2px;writing-mode:vertical-rl;}
+  .cover h1{
+    color:#e8dfc4;font-family:'Noto Serif TC',serif;font-weight:700;font-size:1rem;
+    writing-mode:vertical-rl;letter-spacing:6px;margin:6px 0 30px;text-align:center;
+  }
+  nav.tabs{display:flex;flex-direction:column;gap:2px;width:100%;padding:0 14px;}
+  nav.tabs button{
+    all:unset;cursor:pointer;color:#c9bfa0;font-family:'Noto Serif TC',serif;font-size:0.9375rem;
+    padding:12px 14px;border-radius:4px;letter-spacing:2px;text-align:center;
+    border-left:3px solid transparent;transition:.15s;
+  }
+  nav.tabs button:hover{background:rgba(255,255,255,.06);}
+  nav.tabs button.active{background:var(--paper);color:var(--seal-dark);font-weight:700;border-left:3px solid var(--seal);}
+  .cover-footer{margin-top:auto;color:#7d7562;font-size:0.6875rem;padding:0 16px;text-align:center;line-height:1.7;}
+
+  main{flex:1;background:var(--paper);background-image:linear-gradient(var(--paper) 0, var(--paper) 100%);padding:2.25rem 2.75rem;overflow-x:hidden;}
+  .page-title{font-family:'Noto Serif TC',serif;font-weight:900;font-size:1.5rem;color:var(--ink);margin:0 0 4px;}
+  .page-sub{color:var(--ink-soft);font-size:0.8125rem;margin:0 0 26px;}
+
+  .card{background:var(--paper-alt);border:1px solid var(--rule);border-radius:8px;padding:1.5rem 1.625rem;margin-bottom:22px;}
+  .card h2{font-family:'Noto Serif TC',serif;font-size:1rem;margin:0 0 16px;color:var(--seal-dark);display:flex;align-items:center;gap:8px;}
+  .card h2::before{content:"";width:6px;height:6px;background:var(--seal);border-radius:50%;display:inline-block;}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+  .grid-4{display:grid;grid-template-columns:1.2fr 1fr 1.2fr 1fr;gap:12px;}
+  @media(max-width:900px){.grid-4{grid-template-columns:1fr 1fr;}}
+  @media(max-width:768px){.grid-2, .grid-3, .grid-4{grid-template-columns:1fr;}}
+
+  label.field{display:block;margin-bottom:16px;}
+  label.field .lbl{display:block;font-size:0.78125rem;color:var(--ink-soft);margin-bottom:6px;letter-spacing:1px;}
+  input[type=text], input[type=number], input[type=date], input[type=password], select{
+    width:100%;padding:9px 12px;border:1px solid var(--rule);border-radius:5px;background:#fffdf7;
+    font-family:'Noto Sans TC',sans-serif;font-size:0.875rem;color:var(--ink);
+  }
+  input:focus, select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(169,129,47,.15);}
+
+  .mode-switch{
+    display:flex;gap:0;border:1px solid var(--seal);border-radius:6px;overflow:hidden;margin-bottom:18px;width:fit-content;background:#fffdf7;
+  }
+  .mode-switch button{
+    all:unset;cursor:pointer;padding:8px 20px;font-family:'Noto Serif TC',serif;font-weight:700;font-size:0.875rem;color:var(--seal-dark);transition:.15s;
+  }
+  .mode-switch button.active{background:var(--seal);color:#fdf6ea;}
+
+  .event-pill-bar{
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--paper-alt);padding:10px 14px;border:1px solid var(--rule);border-radius:8px;margin-bottom:20px;
+  }
+  .event-pill-bar .pill-lbl{font-size:0.8125rem;font-weight:bold;color:var(--seal-dark);margin-right:4px;}
+  .event-pill{
+    all:unset;cursor:pointer;padding:6px 14px;border-radius:20px;font-size:0.8125rem;font-family:'Noto Serif TC',serif;border:1px solid var(--rule);background:#fffdf7;color:var(--ink);transition:.15s;
+  }
+  .event-pill:hover{border-color:var(--gold);color:var(--gold);}
+  .event-pill.active{background:var(--seal);color:#fdf6ea;border-color:var(--seal);font-weight:bold;}
+  .event-pill-add{border-style:dashed;color:var(--seal-dark);background:rgba(163,54,59,0.05);}
+
+  .member-card{
+    background:#fffdf7;border:1px solid var(--rule);border-radius:6px;padding:14px;margin-bottom:12px;position:relative;
+  }
+  .member-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .member-title{font-family:'Noto Serif TC',serif;font-weight:700;font-size:0.9375rem;color:var(--seal-dark);}
+
+  .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;}
+  .cat-item{border:1px solid var(--rule);border-radius:6px;background:#fffdf7;padding:10px 12px;position:relative;}
+  .cat-item.checked{border-color:var(--seal);background:#fbf1ea;}
+  .cat-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding-right:20px;}
+  .cat-head input[type=checkbox]{width:16px;height:16px;accent-color:var(--seal);}
+  .cat-head span.cat-title{font-family:'Noto Serif TC',serif;font-weight:700;font-size:0.875rem;}
+
+  .cat-price-wrap{margin-left:auto;display:flex;align-items:center;gap:4px;}
+  .cat-price-tag{font-size:0.6875rem;color:var(--seal-dark);background:#f6e9d8;border:1px solid var(--rule);border-radius:10px;padding:1px 8px;font-family:'Noto Sans TC',sans-serif;white-space:nowrap;}
+  .btn-edit-price{background:none;border:none;cursor:pointer;font-size:0.6875rem;color:var(--ink-soft);padding:0 2px;line-height:1;}
+  .btn-edit-price:hover{color:var(--gold);}
+
+  .cat-note{margin-top:8px;display:none;flex-direction:column;gap:6px;}
+  .cat-item.checked .cat-note{display:flex;}
+  .cat-note-row{display:flex;gap:6px;align-items:center;}
+  .cat-note input{padding:6px 10px;font-size:0.78125rem;}
+
+  .member-select-wrap{
+    background:#fff;border:1px dashed var(--rule);border-radius:4px;padding:6px 8px;margin-top:4px;
+  }
+  .member-select-lbl{font-size:0.71875rem;color:var(--seal-dark);font-weight:bold;margin-bottom:4px;display:block;}
+  .member-chip-group{display:flex;flex-wrap:wrap;gap:4px;}
+  .member-chip{
+    font-size:0.6875rem;padding:2px 8px;border-radius:12px;border:1px solid var(--rule);
+    background:#faf8f2;cursor:pointer;user-select:none;transition:.15s;color:var(--ink-soft);
+  }
+  .member-chip.selected{ background:var(--seal);color:#fff;border-color:var(--seal-dark); }
+
+  .btn-del-cat{
+    position:absolute;top:6px;right:6px;background:none;border:none;color:#b35256;
+    font-size:0.8125rem;font-weight:bold;cursor:pointer;padding:2px 6px;border-radius:50%;
+    line-height:1;transition:0.15s;
+  }
+  .btn-del-cat:hover{background:#f6e6e6;color:var(--seal-dark);}
+
+  .grand-total-row{margin-top:14px;text-align:right;font-family:'Noto Serif TC',serif;font-size:0.9375rem;color:var(--seal-dark);font-weight:700;}
+  .grand-total-row span{font-size:1.1875rem;font-weight:900;}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .btn{
+    all:unset;cursor:pointer;padding:10px 20px;border-radius:6px;font-size:0.84375rem;font-weight:700;
+    letter-spacing:1px;text-align:center;
+  }
+  .btn-primary{background:var(--seal);color:#fdf6ea;}
+  .btn-primary:hover{background:var(--seal-dark);}
+  .btn-ghost{background:transparent;border:1px solid var(--rule);color:var(--ink-soft);}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+  .btn-sm{padding:5px 12px;font-size:0.75rem;border-radius:5px;}
+  .btn-danger{background:transparent;color:#a3363b;border:1px solid #d8b9ba;}
+  .btn-danger:hover{background:#f6e6e6;}
+
+  table{width:100%;border-collapse:collapse;font-size:0.8125rem;}
+  thead th{
+    text-align:left;font-family:'Noto Serif TC',serif;font-size:0.78125rem;color:var(--ink-soft);
+    border-bottom:2px solid var(--rule);padding:8px 10px;letter-spacing:1px;
+  }
+  tbody td{padding:10px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  tbody tr:hover{background:rgba(169,129,47,.06);}
+  .stamp{
+    display:inline-block;font-size:0.65625rem;color:var(--seal-dark);border:1px solid var(--seal);
+    border-radius:3px;padding:2px 6px;margin:0 4px 4px 0;background:#fbf1ea;font-family:'Noto Serif TC',serif;
+  }
+  .stamp small{color:var(--ink-soft);font-family:'Noto Sans TC',sans-serif;margin-left:4px;}
+  .type-tag{display:inline-block;background:var(--gold);color:#fff;font-size:0.65625rem;padding:1px 6px;border-radius:4px;margin-right:6px;}
+  .member-badge{display:inline-block;background:#6b6152;color:#fff;font-size:0.625rem;padding:1px 5px;border-radius:3px;margin-right:3px;}
+  .empty{color:var(--ink-soft);font-size:0.8125rem;padding:20px 4px;text-align:center;}
+
+  .search-toggle, .print-toggle{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .search-toggle button, .print-toggle button{
+    all:unset;cursor:pointer;padding:8px 18px;border-radius:20px;font-size:0.8125rem;border:1px solid var(--rule);color:var(--ink-soft);
+  }
+  .search-toggle button.active, .print-toggle button.active{background:var(--seal);color:#fdf6ea;border-color:var(--seal);}
+
+  .detail-card{border:1px solid var(--rule);border-radius:8px;background:#fffdf7;padding:20px;}
+  .detail-name{font-family:'Noto Serif TC',serif;font-size:1.25rem;font-weight:900;color:var(--ink);margin:0 0 6px;}
+  .detail-meta{font-size:0.78125rem;color:var(--ink-soft);margin-bottom:12px;line-height:1.6;}
+
+  .stat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+  .stat{background:var(--paper-alt);border:1px solid var(--rule);border-radius:6px;padding:10px 16px;font-size:0.78125rem;color:var(--ink-soft);}
+  .stat b{display:block;font-family:'Noto Serif TC',serif;font-size:1.125rem;color:var(--seal-dark);}
+  .stat span{font-size:0.71875rem;color:#7d7562;}
+
+  .print-opts{display:flex;gap:14px;flex-wrap:wrap;background:#fff;padding:12px 16px;border:1px solid var(--rule);border-radius:6px;margin-bottom:16px;}
+  .print-opts label{font-size:0.8125rem;display:flex;align-items:center;gap:6px;cursor:pointer;}
+
+  .font-scale-control{
+    display:flex;align-items:center;gap:8px;font-size:0.8125rem;color:var(--ink-soft);
+    background:rgba(255,255,255,0.4);padding:4px 10px;border-radius:6px;border:1px solid var(--rule);
+  }
+  .font-scale-control input[type=range]{ width:90px;cursor:pointer;accent-color:var(--seal); }
+
+  .toast{
+    position:fixed;bottom:22px;right:22px;background:var(--ink);color:#f4eedd;padding:11px 20px;
+    border-radius:6px;font-size:0.8125rem;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  .print-grand-total{font-family:'Noto Serif TC',serif;font-size:1.125rem;font-weight:900;text-align:right;margin-top:14px;color:var(--seal-dark);}
+  #print-area{display:none;}
+
+  .cert-container{
+    background:#fff;border:8px double var(--seal);padding:42px 38px;max-width:680px;margin:0 auto;position:relative;box-shadow:0 0 10px rgba(0,0,0,0.1);
+  }
+  .cert-header{text-align:center;margin-bottom:28px;}
+  .cert-title{font-family:'Noto Serif TC',serif;font-weight:900;font-size:28px;letter-spacing:10px;color:var(--seal-dark);margin:0 0 8px 0;}
+  .cert-sub{font-size:20px;color:var(--seal-dark);letter-spacing:4px;font-weight:bold;font-family:'Noto Serif TC',serif;}
+  .cert-body{font-family:'Noto Serif TC',serif;font-size:16px;line-height:2.2;color:#222;margin-bottom:30px;text-indent:2em;}
+  .cert-amount{font-size:20px;font-weight:bold;color:var(--seal-dark);border-bottom:1px solid var(--seal-dark);padding:0 8px;}
+  .cert-footer{display:flex;flex-direction:column;gap:18px;align-items:stretch;margin-top:35px;}
+  .cert-date{font-family:'Noto Serif TC',serif;font-size:16px;color:#333;font-weight:bold;}
+
+  .temple-official-seal{
+    width: 96px; height: 96px; border: 3px solid #8f2125; border-radius: 50%;
+    padding: 2px; display: inline-flex; align-items: center; justify-content: center;
+    transform: rotate(-1.5deg); filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.1));
+    user-select: none; background: #fffdfa;
+  }
+  .temple-seal-mid{
+    width: 100%; height: 100%; border: 1.5px dashed #8f2125; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; padding: 2px;
+  }
+  .temple-seal-in{
+    width: 100%; height: 100%; border: 1.5px solid #8f2125; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #8f2125; font-weight: 900;
+  }
+  .temple-seal-top{ font-family: 'Noto Serif TC', serif; font-size: 23px; letter-spacing: 6px; margin-left: 6px; line-height: 1; }
+  .temple-seal-bot{ font-family: 'Noto Serif TC', serif; font-size: 16px; letter-spacing: 3px; margin-left: 3px; margin-top: 3px; }
+
+  @page { size: A4 portrait; margin: 8mm 10mm; }
+
+  @media print{
+    body *{visibility:hidden !important;}
+    #print-area, #print-area *{visibility:visible !important;}
+    #print-area{display:block !important; position:absolute !important; top:0 !important; left:0 !important; width:100% !important; padding:0 !important; background:#fff !important;}
+    .print-title{font-family:'Noto Serif TC',serif; font-size:18px; font-weight:900; margin:0 0 2px 0;}
+    .print-sub{font-size:11px; color:#555; margin:0 0 4px 0;}
+    .print-stat-header{font-size:11px; color:#333; margin-bottom:4px; background:#f7f7f7; padding:4px 6px; border:1px solid #ccc;}
+    .print-section{margin-bottom:6px; page-break-inside:auto;}
+    .print-section h3{font-family:'Noto Serif TC',serif; border-bottom:1.2px solid #000; padding-bottom:2px; margin:4px 0 2px 0; font-size:13px;}
+    .print-meta{font-size:11px; color:#444; margin-bottom:3px; line-height:1.3;}
+    .print-section table, #print-area table{width:100% !important; border-collapse:collapse !important; margin-bottom:4px; page-break-inside:auto;}
+    .print-section tr, #print-area tr{page-break-inside:avoid; page-break-after:auto;}
+    .print-section th, .print-section td, #print-area th, #print-area td{border:1px solid #444 !important; padding:3px 5px !important; font-size:11px !important; text-align:left !important; vertical-align:middle !important;}
+    .print-grand-total{font-family:'Noto Serif TC',serif; font-size:13px; font-weight:900; text-align:right; margin-top:4px;}
+
+    body.compact-print .print-section {
+      margin-bottom: 2px !important;
+      break-inside: auto !important;
+      page-break-inside: auto !important;
+    }
+    body.compact-print table {
+      margin-bottom: 2px !important;
+    }
+    body.compact-print th, body.compact-print td {
+      padding: 2px 4px !important;
+    }
+
+    body.two-column-print #print-area .print-content-container { column-count: 2; column-gap: 16px; column-rule: 1px dotted #888; width: 100%; }
+    body.two-column-print .print-section { break-inside: avoid; page-break-inside: avoid; margin-bottom: 6px; }
+    body.two-column-print .print-title-wrap { column-span: all; border-bottom: 1.5px solid var(--seal-dark); padding-bottom: 3px; margin-bottom: 6px; }
+    body.two-column-print .print-stat-header { column-span: all; }
+    body.two-column-print .print-grand-total { column-span: all; }
+
+    body.cert-print-mode #print-area { display: flex !important; align-items: center !important; justify-content: center !important; min-height: 95vh !important; }
+    body.cert-print-mode .cert-container { box-shadow: none; width: 92%; border-width: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="cover">
+    <div class="seal"><span>登記</span></div>
+    <h1>順天太子會資料管理系統</h1>
+    <nav class="tabs">
+      <button data-tab="input" class="active">法會登記</button>
+      <button data-tab="pilgrimage">🚩 進香管理</button>
+      <button data-tab="donation">💰 捐款管理</button>
+      <button data-tab="search">🔍 查詢</button>
+      <button data-tab="print">🖨 列印清單</button>
+      <button data-tab="cloud" style="color:#7ee8fa;border-top:1px dashed var(--cover-line);margin-top:4px;">☁️ 雲端帳號</button>
+    </nav>
+    <div class="cover-footer">資料儲存在此瀏覽器中<br>不會與他人共用<br>建議定期「匯出備份」</div>
+  </div>
+
+  <main>
+    <!-- ============ 1. 法會登記分頁 ============ -->
+    <section id="tab-input">
+      <p class="page-title" id="display-event-title">順天太子會資料管理系統</p>
+      <p class="page-sub">支援個人登記與家庭登記，活動名稱可自由重新命名。</p>
+
+      <div class="event-pill-bar" id="dharma-event-bar">
+        <span class="pill-lbl">📌 法會活動：</span>
+        <div id="dharma-pills" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;"></div>
+      </div>
+
+      <div class="row" style="margin-bottom:22px;background:var(--paper-alt);padding:12px 16px;border:1px solid var(--rule);border-radius:8px;">
+        <div class="font-scale-control">
+          <span>🔍 字體大小：</span>
+          <button class="btn btn-ghost btn-sm" id="btn-font-dec" style="padding:1px 6px;">-</button>
+          <input type="range" id="font-scale-range" min="0.8" max="1.8" step="0.05" value="1">
+          <button class="btn btn-ghost btn-sm" id="btn-font-inc" style="padding:1px 6px;">+</button>
+          <span id="font-scale-val" style="min-width:38px;font-weight:bold;">100%</span>
+        </div>
+
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" id="btn-export-full">⬇ 完整備份</button>
+          <button class="btn btn-ghost btn-sm" id="btn-export-base">⬇ 基本名冊</button>
+          <button class="btn btn-ghost btn-sm" id="btn-import-trigger">⬆ 匯入備份</button>
+          <input type="file" id="btn-import" accept="application/json" style="display:none;">
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 id="form-heading">新增登記</h2>
+
+        <div class="mode-switch" id="mode-switch-bar">
+          <button type="button" class="active" data-mode="single">👤 個人登記模式</button>
+          <button type="button" data-mode="family">👨‍👩‍👧‍👦 家庭／戶頭登記模式</button>
+        </div>
+
+        <!-- 個人模式專用區塊 -->
+        <div id="section-single-mode">
+          <div class="grid-3">
+            <label class="field"><span class="lbl">姓名 *</span><input type="text" id="f-name" placeholder="請輸入姓名"></label>
+            <label class="field"><span class="lbl">連絡電話 (選填)</span><input type="text" id="f-phone" placeholder="例如：0912345678"></label>
+            <label class="field"><span class="lbl">身分證字號</span><input type="text" id="f-id-number" placeholder="例如：A123456789"></label>
+          </div>
+
+          <div class="grid-3">
+            <label class="field">
+              <span class="lbl">生肖 (選擇或自動帶入)</span>
+              <select id="f-zodiac">
+                <option value="">-- 請選擇 --</option>
+                <option value="鼠">鼠 (子 - 13,000貫)</option>
+                <option value="牛">牛 (丑 - 280,000貫)</option>
+                <option value="虎">虎 (寅 - 80,000貫)</option>
+                <option value="兔">兔 (卯 - 80,000貫)</option>
+                <option value="龍">龍 (辰 - 50,000貫)</option>
+                <option value="蛇">蛇 (巳 - 70,000貫)</option>
+                <option value="馬">馬 (午 - 60,000貫)</option>
+                <option value="羊">羊 (未 - 100,000貫)</option>
+                <option value="猴">猴 (申 - 40,000貫)</option>
+                <option value="雞">雞 (酉 - 50,000貫)</option>
+                <option value="狗">狗 (戌 - 25,000貫)</option>
+                <option value="豬">豬 (亥 - 9,000貫)</option>
+              </select>
+            </label>
+            <label class="field"><span class="lbl">國曆生日 (自動同步)</span><input type="text" id="f-solar-birth" placeholder="例如：1966/10/06" onblur="handleDateInput('solar', this)"></label>
+            <label class="field"><span class="lbl">民國生日 (自動同步)</span><input type="text" id="f-roc-birth" placeholder="例如：55/10/06" onblur="handleDateInput('roc', this)"></label>
+          </div>
+
+          <div id="past-participation-tip" style="font-size:0.8rem;color:var(--gold);margin-bottom:12px;font-weight:bold;display:none;"></div>
+
+          <div class="grid-3">
+            <label class="field"><span class="lbl">農曆生日 (自動同步)</span><input type="text" id="f-lunar-birth" placeholder="例如：55/09/03" onblur="handleDateInput('lunar', this)"></label>
+            <label class="field"><span class="lbl">居住地址</span><input type="text" id="f-address" placeholder="請輸入完整住家地址"></label>
+            <label class="field"><span class="lbl">所屬標籤 / 備註</span><input type="text" id="f-single-tag" placeholder="選填，例如：朋友、顧問"></label>
+          </div>
+
+          <div class="grid-2">
+            <label class="field"><span class="lbl">公司名稱 (選填)</span><input type="text" id="f-company-name" placeholder="例如：順天企業社"></label>
+            <label class="field"><span class="lbl">公司地址 (選填)</span><input type="text" id="f-company-address" placeholder="請輸入公司完整地址"></label>
+          </div>
+
+          <div style="background:#fffdf7;border:1px solid var(--rule);border-radius:6px;padding:14px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <label class="field" style="margin-bottom:0;flex:1;">
+                <span class="lbl" style="font-weight:bold;color:var(--seal-dark);">欠陰債總額 (貫/金額)</span>
+                <input type="number" id="f-yin-debt" placeholder="0" style="max-width:200px;">
+              </label>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-manage-zodiac-yin">⚙ 編輯十二生肖對照表金額</button>
+            </div>
+            <div style="font-size:0.78125rem;color:var(--ink-soft);margin-bottom:6px;">還陰債紀錄：</div>
+            <div id="yin-repay-list"></div>
+            <button class="btn btn-ghost btn-sm" id="btn-add-repay" style="margin-top:8px;">＋ 新增還款紀錄</button>
+          </div>
+        </div>
+
+        <!-- 家庭模式專用區塊 -->
+        <div id="section-family-mode" style="display:none;">
+          <div class="grid-3">
+            <label class="field"><span class="lbl">戶名 / 戶長代表姓名 *</span><input type="text" id="f-fam-head" placeholder="例如：王小明 戶"></label>
+            <label class="field"><span class="lbl">戶長連絡電話 (選填)</span><input type="text" id="f-fam-phone" placeholder="例如：0912345678"></label>
+            <label class="field"><span class="lbl">全家共用住址</span><input type="text" id="f-fam-address" placeholder="請輸入共同居住地址"></label>
+          </div>
+
+          <div class="grid-2">
+            <label class="field"><span class="lbl">全家共用公司名稱 (選填)</span><input type="text" id="f-fam-company-name" placeholder="例如：順天實業"></label>
+            <label class="field"><span class="lbl">公司地址 (選填)</span><input type="text" id="f-fam-company-address" placeholder="請輸入公司完整地址"></label>
+          </div>
+          <div style="margin-bottom:18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-weight:bold;color:var(--seal-dark);font-size:0.9rem;">家庭成員名冊</span>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-add-member">＋ 新增家庭成員</button>
+            </div>
+            <div id="family-members-container"></div>
+          </div>
+        </div>
+
+        <!-- 項目勾選區 -->
+        <label class="field" style="margin-bottom:10px;border-top:1px dashed var(--rule);padding-top:16px;">
+          <span class="lbl" style="font-weight:bold;color:var(--seal-dark);" id="lbl-cat-section">登記項目（勾選後設定數量與備註）</span>
+        </label>
+        <div class="cat-grid" id="cat-grid"></div>
+
+        <div class="row" style="margin-top:16px;">
+          <input type="text" id="f-newcat" placeholder="新增自訂項目名稱…" style="max-width:200px;">
+          <input type="number" id="f-newcat-price" placeholder="單價" style="max-width:100px;">
+          <button class="btn btn-ghost btn-sm" id="btn-addcat">＋ 新增項目</button>
+        </div>
+
+        <div class="row" style="margin-top:22px;">
+          <button class="btn btn-primary" id="btn-save">儲存</button>
+          <button class="btn btn-ghost" id="btn-clear">清空表單</button>
+          <button class="btn btn-danger" id="btn-cancel-edit" style="display:none;">取消編輯</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>目前所有資料（<span id="record-count">0</span> 筆）</h2>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:140px;">名稱 / 成員</th>
+                <th style="width:190px;">電話 / 身分證 / 生日 / 地址</th>
+                <th style="width:140px;">陰債紀錄</th>
+                <th>登記項目</th>
+                <th style="width:100px;">小計</th>
+                <th style="width:110px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="record-table"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="record-empty" style="display:none;">尚無資料，請在上方新增。</div>
+        <div class="grand-total-row">總計金額：<span id="grand-total">NT$ 0</span></div>
+      </div>
+    </section>
+
+    <!-- ============ 2. 進香管理分頁 ============ -->
+    <section id="tab-pilgrimage" style="display:none;">
+      <p class="page-title">進香人員資料管理系統</p>
+      <p class="page-sub">管理進香名單、車次、車牌、房間號、民國生日與群組階層，新增人員將自動同步至法會登記。</p>
+
+      <div class="event-pill-bar" id="pilgrimage-event-bar">
+        <span class="pill-lbl">🚩 進香活動：</span>
+        <div id="pilgrimage-pills" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;"></div>
+      </div>
+
+      <div class="card">
+        <h2>🚌 車次名稱與車牌設定</h2>
+        <div class="row" style="margin-bottom:12px;">
+          <input type="text" id="new-car-name" placeholder="輸入新車次名稱（例如：第7車）" style="max-width:260px;">
+          <input type="text" id="new-car-plate" placeholder="對應車牌號碼" style="max-width:180px;">
+          <button class="btn btn-primary btn-sm" id="btn-add-car-tier">＋ 新增／更新車次</button>
+        </div>
+        <div class="grid-3" id="car-plates-config-box" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <h2 id="pilg-form-heading">新增進香人員</h2>
+        <div class="row" style="margin-bottom:14px;background:var(--paper-alt);padding:10px 14px;border:1px solid var(--rule);border-radius:6px;">
+          <label style="font-size:0.8125rem;font-weight:bold;color:var(--seal-dark);display:flex;align-items:center;gap:8px;flex:1;">
+            從既有法會名冊快速帶入：
+            <select id="pilg-import-select" style="max-width:320px;">
+              <option value="">-- 請選擇既有名冊人員代入 --</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid-3">
+          <label class="field"><span class="lbl">姓名 *</span><input type="text" id="pilg-name" placeholder="請輸入姓名"></label>
+          <label class="field"><span class="lbl">電話 (選填)</span><input type="text" id="pilg-phone" placeholder="例如：0912345678"></label>
+          <label class="field"><span class="lbl">身分證字號</span><input type="text" id="pilg-id-number" placeholder="身分證字號"></label>
+        </div>
+
+        <div class="grid-2">
+          <label class="field"><span class="lbl">民國生日 (自動計算生肖)</span><input type="text" id="pilg-roc-birth" placeholder="例如：55/10/06" onblur="handlePilgRocInput(this)"></label>
+          <label class="field">
+            <span class="lbl">所屬群組 / 帶隊人 (選填)</span>
+            <select id="pilg-parent-select">
+              <option value="">-- 獨立個人 (無上級群組) --</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid-3">
+          <label class="field">
+            <span class="lbl">選擇車次 *</span>
+            <select id="pilg-bus"></select>
+          </label>
+          <label class="field">
+            <span class="lbl">車牌號碼</span>
+            <input type="text" id="pilg-plate" list="plate-datalist" placeholder="輸入或選擇車牌">
+            <datalist id="plate-datalist"></datalist>
+          </label>
+          <label class="field"><span class="lbl">房間號碼</span><input type="text" id="pilg-room" placeholder="例如：A-302"></label>
+        </div>
+
+        <label class="field"><span class="lbl">備註</span><input type="text" id="pilg-note" placeholder="選填備註"></label>
+
+        <div class="row" style="margin-top:16px;">
+          <button class="btn btn-primary" id="btn-pilg-save">儲存進香人員</button>
+          <button class="btn btn-ghost" id="btn-pilg-clear">清空表單</button>
+          <button class="btn btn-danger" id="btn-pilg-cancel-edit" style="display:none;">取消編輯</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🚩 進香清冊查詢與列印設定</h2>
+        <div class="print-opts" style="margin-bottom:14px;">
+          <label style="color:var(--seal-dark);font-weight:bold;"><input type="checkbox" id="ppo-two-col"> 📑 A4 左右雙欄對折模式</label>
+          <label style="color:var(--gold);font-weight:bold;"><input type="checkbox" id="ppo-compact"> 📄 啟用 A4 不留空白模式（連續緊接）</label>
+          <label><input type="checkbox" id="ppo-stat" checked> 顯示統計</label>
+          <label><input type="checkbox" id="ppo-phone" checked> 顯示電話</label>
+          <label><input type="checkbox" id="ppo-birth" checked> 顯示民國生日</label>
+          <label><input type="checkbox" id="ppo-id" checked> 顯示身分證字號</label>
+          <label><input type="checkbox" id="ppo-bus" checked> 顯示車次與車牌</label>
+          <label><input type="checkbox" id="ppo-room" checked> 顯示房間號碼</label>
+          <label><input type="checkbox" id="ppo-note" checked> 顯示備註</label>
+        </div>
+
+        <div class="row" style="margin-bottom:16px;background:#fffdf7;padding:12px;border:1px solid var(--rule);border-radius:6px;">
+          <label style="font-size:0.8125rem;font-weight:bold;color:var(--seal-dark);display:flex;align-items:center;gap:6px;">
+            列印範圍選取：
+            <select id="pilg-print-scope-select" style="max-width:300px;"><option value="__ALL__">全部進香人員</option></select>
+          </label>
+          <button class="btn btn-primary btn-sm" id="btn-pilg-gen-preview">產生預覽</button>
+          <button class="btn btn-ghost btn-sm" id="btn-pilg-print-action">🖨 列印進香清冊</button>
+        </div>
+
+        <div id="pilg-print-preview-area" style="margin-bottom:18px;"></div>
+        <div class="row" style="margin-bottom:16px;"><input type="text" id="pilg-search-input" placeholder="搜尋…" style="max-width:280px;"></div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>序號</th><th>姓名</th><th>電話</th><th>民國生日</th><th>身分證字號</th><th>車次 / 車牌</th><th>房間號</th><th>備註</th><th style="text-align:center;">操作</th></tr></thead>
+            <tbody id="pilg-table-body"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="pilg-table-empty" style="display:none;">尚無進香資料。</div>
+        <div class="grand-total-row">進香總人數：<span id="pilg-total-count">0</span> 人</div>
+      </div>
+    </section>
+
+    <!-- ============ 3. 捐款管理分頁 ============ -->
+    <section id="tab-donation" style="display:none;">
+      <p class="page-title">隨喜／法會捐款管理系統</p>
+      <p class="page-sub">獨立記錄活動功德捐款與感謝狀列印，活動名稱可重新命名。</p>
+
+      <div class="event-pill-bar" id="donation-event-bar">
+        <span class="pill-lbl">💰 捐款活動：</span>
+        <div id="donation-pills" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;"></div>
+      </div>
+
+      <div class="card">
+        <h2>新增捐款紀錄</h2>
+        <div class="row" style="margin-bottom:14px;background:var(--paper-alt);padding:10px 14px;border:1px solid var(--rule);border-radius:6px;">
+          <label style="font-size:0.8125rem;font-weight:bold;color:var(--seal-dark);display:flex;align-items:center;gap:8px;flex:1;">
+            從既有法會名冊快速帶入：
+            <select id="don-import-select" style="max-width:320px;">
+              <option value="">-- 請選擇既有名冊人員帶入 --</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid-3">
+          <label class="field"><span class="lbl">捐款人姓名 / 寶號 *</span><input type="text" id="don-name" placeholder="請輸入姓名"></label>
+          <label class="field"><span class="lbl">聯絡電話</span><input type="text" id="don-phone" placeholder="電話"></label>
+          <label class="field"><span class="lbl">捐款日期 *</span><input type="date" id="don-date"></label>
+        </div>
+        <div class="grid-3">
+          <label class="field">
+            <span class="lbl">捐款項目 *</span>
+            <div class="row" style="gap:4px;">
+              <input type="text" id="don-item-input" list="don-item-datalist" placeholder="自訂項目…" style="flex:1;">
+              <datalist id="don-item-datalist"></datalist>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-manage-don-items" style="padding:4px 8px;font-size:0.75rem;">⚙ 管理</button>
+            </div>
+          </label>
+          <label class="field"><span class="lbl">捐款金額 (NT$) *</span><input type="number" id="don-amount" placeholder="金額" min="1"></label>
+          <label class="field">
+            <span class="lbl">付款方式</span>
+            <select id="don-pay-method"><option value="現金">現金</option><option value="銀行轉帳 / 匯款">銀行轉帳 / 匯款</option><option value="支票">支票</option><option value="其他">其他</option></select>
+          </label>
+        </div>
+        <div class="grid-2">
+          <label class="field"><span class="lbl">收據通訊地址</span><input type="text" id="don-address" placeholder="地址"></label>
+          <label class="field"><span class="lbl">備註 / 祈願事由</span><input type="text" id="don-note" placeholder="備註"></label>
+        </div>
+        <div class="row" style="margin-top:16px;">
+          <button class="btn btn-primary" id="btn-don-save">儲存捐款</button>
+          <button class="btn btn-ghost" id="btn-don-clear">清空表單</button>
+          <button class="btn btn-danger" id="btn-don-cancel-edit" style="display:none;">取消編輯</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>捐款清冊查詢與列印設定</h2>
+        <div class="print-opts" style="margin-bottom:14px;">
+          <label style="color:var(--seal-dark);font-weight:bold;"><input type="checkbox" id="dpo-two-col"> 📑 A4 左右雙欄對折模式</label>
+          <label style="color:var(--gold);font-weight:bold;"><input type="checkbox" id="dpo-compact"> 📄 啟用 A4 不留空白模式（連續緊接）</label>
+          <label><input type="checkbox" id="dpo-stat" checked> 顯示統計</label>
+        </div>
+        <div class="row" style="margin-bottom:16px;background:#fffdf7;padding:12px;border:1px solid var(--rule);border-radius:6px;">
+          <label style="font-size:0.8125rem;font-weight:bold;color:var(--seal-dark);display:flex;align-items:center;gap:6px;">
+            列印範圍選取：
+            <select id="don-print-scope-select" style="max-width:320px;"></select>
+          </label>
+          <button class="btn btn-primary btn-sm" id="btn-don-gen-preview">產生預覽</button>
+          <button class="btn btn-ghost btn-sm" id="btn-don-print-action">🖨 列印清單</button>
+        </div>
+        <div id="don-print-preview-area" style="margin-bottom:18px;"></div>
+        <div class="row" style="margin-bottom:16px;"><input type="text" id="don-search-input" placeholder="搜尋捐款人…" style="max-width:280px;"></div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>捐款日期</th><th>捐款人 / 寶號</th><th>電話</th><th>項目</th><th style="text-align:right;">金額</th><th>地址 / 備註</th><th style="text-align:center;">操作</th></tr></thead>
+            <tbody id="don-table-body"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="don-table-empty" style="display:none;">尚無捐款資料。</div>
+        <div class="grand-total-row">總捐款筆數：<span id="don-total-count">0</span> 筆 ｜ 總金額：<span id="don-total-amount">NT$ 0</span></div>
+      </div>
+
+      <div class="card" id="cert-preview-card" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <h2>📜 感謝狀預覽與輸出設定</h2>
+          <div>
+            <button class="btn btn-primary btn-sm" id="btn-print-single-cert">🖨 列印感謝狀</button>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cert-preview-card').style.display='none';">關閉預覽</button>
+          </div>
+        </div>
+        <div id="cert-render-area"></div>
+      </div>
+    </section>
+
+    <!-- ============ 4. 查詢分頁 ============ -->
+    <section id="tab-search" style="display:none;">
+      <p class="page-title">法會查詢</p>
+      <p class="page-sub">提供與列印完全一致的多維度分類查詢，並可直接點擊編輯。</p>
+
+      <div class="search-toggle">
+        <button data-smode="cat" class="active">依項目查詢</button>
+        <button data-smode="name">依姓名 / 成員查詢</button>
+        <button data-smode="yin-all">全部陰債查詢</button>
+        <button data-smode="yin-unpaid">未償還陰債查詢</button>
+      </div>
+
+      <!-- 依項目查詢面板 -->
+      <div class="card" id="search-cat-panel">
+        <h2>依項目查詢</h2>
+        <div style="background:#fffdf7;padding:12px;border:1px solid var(--rule);border-radius:6px;margin-bottom:12px;">
+          <div style="font-size:0.8125rem;font-weight:bold;color:var(--seal-dark);margin-bottom:6px;">勾選要查詢的項目（可複選或全選）：</div>
+          <div id="search-cat-checkboxes" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;"></div>
+          <div style="margin-top:8px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAllSearchCats(true)">全選</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAllSearchCats(false)">全不選</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn-do-search-cat">執行查詢</button>
+      </div>
+
+      <!-- 依姓名／成員查詢面板 -->
+      <div class="card" id="search-name-panel" style="display:none;">
+        <h2>依姓名／家庭／成員查詢</h2>
+        <div class="row" style="background:#fffdf7;padding:12px;border:1px solid var(--rule);border-radius:6px;margin-bottom:12px;">
+          <select id="s-name-target" style="max-width:360px;"></select>
+          <button class="btn btn-primary btn-sm" id="btn-do-search-name">執行查詢</button>
+        </div>
+      </div>
+
+      <!-- 陰債查詢面板 -->
+      <div class="card" id="search-yin-panel" style="display:none;">
+        <h2 id="search-yin-title">陰債名單查詢</h2>
+        <button class="btn btn-primary btn-sm" id="btn-do-search-yin">顯示查詢結果</button>
+      </div>
+
+      <div id="search-result-area" style="margin-top:20px;"></div>
+    </section>
+
+    <!-- ============ 5. 列印清單分頁 ============ -->
+    <section id="tab-print" style="display:none;">
+      <p class="page-title">法會列印清單</p>
+      <p class="page-sub">產生法會與陰債清單並列印。</p>
+      <div class="stat-row" id="stat-row"></div>
+
+      <div class="print-toggle">
+        <button data-pmode="cat" class="active">依項目列印</button>
+        <button data-pmode="name">依姓名 / 戶頭列印</button>
+        <button data-pmode="yin-all">全部陰債名單</button>
+        <button data-pmode="yin-unpaid">全部未償還陰債名單</button>
+      </div>
+
+      <div class="card">
+        <h2>列印顯示與排版設定</h2>
+        <div class="print-opts">
+          <label style="color:var(--seal-dark);font-weight:bold;"><input type="checkbox" id="po-two-col"> 📑 A4 左右雙欄對折模式</label>
+          <label style="color:var(--gold);font-weight:bold;"><input type="checkbox" id="po-compact-a4"> 📄 啟用 A4 不留空白模式（連續緊接）</label>
+          <label><input type="checkbox" id="po-stat" checked> 顯示統計概況</label>
+          <label><input type="checkbox" id="po-count-stat" checked> 顯示總數量統計</label>
+          <label><input type="checkbox" id="po-person-stat" checked> 顯示總人數統計</label>
+          <label><input type="checkbox" id="po-family-members" checked> 顯示家庭成員名冊明細</label>
+          <label><input type="checkbox" id="po-relation-group" checked> 顯示稱謂與所屬戶頭</label>
+          <label><input type="checkbox" id="po-phone" checked> 顯示電話</label>
+          <label><input type="checkbox" id="po-zodiac" checked> 顯示生肖</label>
+          <label><input type="checkbox" id="po-birth-solar"> 顯示國曆生日</label>
+          <label><input type="checkbox" id="po-birth-roc" checked> 顯示民國生日</label>
+          <label><input type="checkbox" id="po-birth-lunar"> 顯示農曆生日</label>
+          <label><input type="checkbox" id="po-id" checked> 顯示身分證字號</label>
+          <label><input type="checkbox" id="po-address" checked> 顯示居住地址</label>
+          <label><input type="checkbox" id="po-company" checked> 顯示公司名稱與地址</label>
+          <label><input type="checkbox" id="po-yin" checked> 顯示陰債資訊與還款紀錄</label>
+          <label><input type="checkbox" id="po-count" checked> 顯示明細數量</label>
+          <label><input type="checkbox" id="po-note" checked> 顯示備註</label>
+          <label><input type="checkbox" id="po-price" checked> 顯示金額</label>
+        </div>
+
+        <!-- 依項目列印選取區 -->
+        <div id="print-selector-area">
+          <h2>產生清單 (依項目選取)</h2>
+          <div style="background:#fffdf7;padding:12px;border:1px solid var(--rule);border-radius:6px;margin-bottom:12px;">
+            <div style="font-size:0.8125rem;font-weight:bold;color:var(--seal-dark);margin-bottom:6px;">勾選要列印的項目（可複選或全選）：</div>
+            <div id="print-cat-checkboxes" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;"></div>
+            <div style="margin-top:8px;">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAllPrintCats(true)">全選</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAllPrintCats(false)">全不選</button>
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn btn-primary" id="btn-gen">產生預覽</button>
+            <button class="btn btn-primary" id="btn-print">🖨 列印清單</button>
+          </div>
+        </div>
+
+        <!-- 依姓名列印選取區 -->
+        <div id="print-name-selector-area" style="display:none;">
+          <h2>產生清單 (依姓名／家庭／成員選取)</h2>
+          <div class="row" style="background:#fffdf7;padding:12px;border:1px solid var(--rule);border-radius:6px;margin-bottom:12px;">
+            <label style="font-size:0.8125rem;font-weight:bold;color:var(--seal-dark);display:flex;align-items:center;gap:6px;flex:1;">
+              選取列印對象（個人、整個家庭、或家庭單獨成員）：
+              <select id="p-name-target" style="max-width:360px;"></select>
+            </label>
+            <button class="btn btn-primary" id="btn-gen-name">產生預覽</button>
+            <button class="btn btn-primary" id="btn-print-name">🖨 列印清單</button>
+          </div>
+        </div>
+
+        <!-- 陰債名單專用預覽與列印按鈕區 -->
+        <div id="print-yin-selector-area" style="display:none;">
+          <h2>產生清單 (陰債名單)</h2>
+          <div class="row" style="background:#fffdf7;padding:12px;border:1px solid var(--rule);border-radius:6px;margin-bottom:12px;">
+            <span style="font-size:0.8125rem;font-weight:bold;color:var(--seal-dark);" id="yin-scope-label">目前模式：全部陰債名單</span>
+            <button class="btn btn-primary" id="btn-gen-yin">產生預覽</button>
+            <button class="btn btn-primary" id="btn-print-yin">🖨 列印清單</button>
+          </div>
+        </div>
+
+        <div id="p-preview" style="margin-top:20px;"></div>
+      </div>
+    </section>
+
+    <!-- ============ 6. 雲端帳號與同步分頁 (內建 Supabase) ============ -->
+    <section id="tab-cloud" style="display:none;">
+      <p class="page-title">☁️ Supabase 雲端帳號與同步</p>
+      <p class="page-sub">登入您的帳號，即可將所有資料安全自動同步至雲端。</p>
+
+      <div class="card" style="max-width:600px;">
+        <h2>帳號登入與雲端同步</h2>
+        <div id="auth-logged-out-box">
+          <label class="field">
+            <span class="lbl">電子郵件 (Email)</span>
+            <input type="text" id="auth-email" placeholder="your@email.com">
+          </label>
+          <label class="field">
+            <span class="lbl">密碼 (Password)</span>
+            <input type="password" id="auth-password" placeholder="密碼">
+          </label>
+          <div class="row" style="gap:8px; margin-top:10px;">
+            <button class="btn btn-primary" id="btn-supabase-login">登入</button>
+            <button class="btn btn-ghost" id="btn-supabase-register">註冊新帳號</button>
+          </div>
+        </div>
+
+        <div id="auth-logged-in-box" style="display:none;">
+          <p style="font-size:0.9rem; margin-bottom:12px;">目前登入帳號：<b id="lbl-user-email" style="color:var(--seal-dark);"></b></p>
+          <div class="row" style="gap:8px;">
+            <button class="btn btn-primary" id="btn-supabase-sync">☁️ 立即同步至雲端</button>
+            <button class="btn btn-danger" id="btn-supabase-logout">登出</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="print-area"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_CATS = ['贊普','冤親貴人','歷代祖先','個人祖先','庫錢','嬰靈','動物靈','開天庫','還陰債'];
+const DEFAULT_PRICES = {
+  '贊普':1000, '冤親貴人':600, '歷代祖先':300, '個人祖先':300,
+  '庫錢':300, '嬰靈':300, '動物靈':300,
+  '開天庫':1980, '還陰債':1980
+};
+const DEFAULT_ZODIAC_YIN = {
+  '鼠': 13000, '牛': 280000, '虎': 80000, '兔': 80000,
+  '龍': 50000, '蛇': 70000, '馬': 260000, '羊': 100000,
+  '猴': 40000, '雞': 50000, '狗': 25000, '豬': 9000
+};
+const DEFAULT_CARS = ['第1車', '第2車', '第3車', '第4車', '第5車', '第6車'];
+
+let categories = [...DEFAULT_CATS];
+let prices = {...DEFAULT_PRICES};
+let zodiacYin = {...DEFAULT_ZODIAC_YIN};
+
+let dharmaEvents = ['115年中元普渡'];
+let activeDharmaEvent = '115年中元普渡';
+let pilgrimageEvents = ['115年進香大典'];
+let activePilgrimageEvent = '115年進香大典';
+let donationEvents = ['115年中元普渡', '順天太子聖誕'];
+let activeDonationEvent = '115年中元普渡';
+
+let records = [];
+let pilgrimages = [];
+let donations = [];
+let customDonationItems = [];
+let carPlatesMap = {};
+let customCarsMap = {};
+
+let editingId = null;
+let editingPilgId = null;
+let editingDonId = null;
+let currentViewingDonId = null;
+let currentPrintMode = 'cat';
+let currentSearchMode = 'cat';
+let currentFormMode = 'single';
+let tempSingleRepays = [];
+let tempFamilyMembers = [];
+let fontScale = 1;
+
+// 內建 Supabase 專案設定
+const SB_URL = 'https://ayjzsqysvlulhwwucpxb.supabase.co';
+const SB_KEY = 'sb_publishable_zS_cX8pAy6_iLeHEmn-XJg_BLaSJYoK';
+let sbClient = null;
+
+const LS_CATS = 'faliao_categories_v43';
+const LS_RECORDS = 'faliao_records_v43';
+const LS_PRICES = 'faliao_prices_v43';
+const LS_ZODIAC_YIN = 'faliao_zodiac_yin_v43';
+const LS_FONT_SCALE = 'faliao_font_scale_v43';
+const LS_DHARMA_EVENTS = 'faliao_dharma_events_v43';
+const LS_PILG_EVENTS = 'faliao_pilg_events_v43';
+const LS_DON_EVENTS = 'faliao_don_events_v43';
+const LS_PILG_RECORDS = 'faliao_pilg_records_v43';
+const LS_DONATIONS = 'faliao_donations_v43';
+const LS_DON_ITEMS = 'faliao_don_items_v43';
+const LS_CAR_PLATES = 'faliao_car_plates_v43';
+const LS_CUSTOM_CARS = 'faliao_custom_cars_v43';
+
+// 智慧生日轉換核心邏輯
+function parseDateAny(str) {
+  if(!str) return null;
+  str = String(str).trim();
+  let cleaned = str.replace(/[/\-年月日\s]/g, '/').replace(/\/+/g, '/');
+  let parts = cleaned.split('/');
+  if(parts.length !== 3) return null;
+  let p1 = parseInt(parts[0], 10);
+  let p2 = parseInt(parts[1], 10);
+  let p3 = parseInt(parts[2], 10);
+  if(isNaN(p1) || isNaN(p2) || isNaN(p3)) return null;
+  return { year: p1, month: p2, day: p3 };
+}
+
+function syncDateFields(type, val, solarInput, rocInput, lunarInput, zodiacSelect) {
+  if(!val) return;
+  let parsed = parseDateAny(val);
+  if(!parsed) return;
+  let { year, month, day } = parsed;
+
+  const SolarCls = window.Solar || window.lunar?.Solar;
+  const LunarCls = window.Lunar || window.lunar?.Lunar;
+
+  if (!SolarCls || !LunarCls) {
+    showToast('曆法轉換套件載入中或載入失敗，請檢查網路連線');
+    return;
+  }
+
+  try {
+    let solar, lunar;
+    let gy, gm, gd, rocY, ly, lm, ld;
+
+    if (type === 'solar') {
+      let gYear = year < 1900 ? year + 1911 : year;
+      solar = SolarCls.fromYmd(gYear, month, day);
+      lunar = solar.getLunar();
+    } else if (type === 'roc') {
+      let gYear = year < 1900 ? year + 1911 : year;
+      solar = SolarCls.fromYmd(gYear, month, day);
+      lunar = solar.getLunar();
+    } else if (type === 'lunar') {
+      let lYear = year < 1900 ? year + 1911 : year;
+      lunar = LunarCls.fromYmd(lYear, month, day);
+      solar = lunar.getSolar();
+    }
+
+    gy = solar.getYear();
+    gm = solar.getMonth();
+    gd = solar.getDay();
+    rocY = gy - 1911;
+
+    ly = lunar.getYear();
+    lm = Math.abs(lunar.getMonth());
+    ld = lunar.getDay();
+    let lunarRocY = ly - 1911;
+
+    let f2 = n => String(n).padStart(2, '0');
+    let solarStr = `${gy}/${f2(gm)}/${f2(gd)}`;         // 國曆: xxxx/xx/xx
+    let rocStr = `${f2(rocY)}/${f2(gm)}/${f2(gd)}`;       // 民國: xx/xx/xx
+    let lunarStr = `${f2(lunarRocY)}/${f2(lm)}/${f2(ld)}`; // 農曆: xx/xx/xx
+
+    if(solarInput) solarInput.value = solarStr;
+    if(rocInput) rocInput.value = rocStr;
+    if(lunarInput) lunarInput.value = lunarStr;
+
+    // 自動計算生肖
+    if(zodiacSelect){
+      const zodiacName = lunar.getYearShengXiao(); // lunar-javascript 內建生肖計算
+      if(zodiacName){
+        zodiacSelect.value = zodiacName;
+        // 同步觸發陰債金額代入
+        const eventObj = new Event('change');
+        zodiacSelect.dispatchEvent(eventObj);
+      }
+    }
+  } catch(e) {
+    console.error("Date conversion error:", e);
+    showToast('日期格式或數值超出有效範圍（如該農曆日期不存在）');
+  }
+}
+
+function handleDateInput(type, el) {
+  let parent = el.closest('.card') || document;
+  let solar = parent.querySelector('#f-solar-birth');
+  let roc = parent.querySelector('#f-roc-birth');
+  let lunar = parent.querySelector('#f-lunar-birth');
+  let zodiac = parent.querySelector('#f-zodiac');
+  syncDateFields(type, el.value, solar, roc, lunar, zodiac);
+}
+
+function handlePilgRocInput(el){
+  let val = el.value.trim();
+  if(!val) return;
+  let parsed = parseDateAny(val);
+  if(!parsed) return;
+  const SolarCls = window.Solar || window.lunar?.Solar;
+  if(!SolarCls) return;
+  try {
+    let gYear = parsed.year < 1900 ? parsed.year + 1911 : parsed.year;
+    let solar = SolarCls.fromYmd(gYear, parsed.month, parsed.day);
+    let lunar = solar.getLunar();
+    let zodiacName = lunar.getYearShengXiao();
+    // 進香管理若需自動帶入生肖或陰債可在此擴充
+    let f2 = n => String(n).padStart(2, '0');
+    el.value = `${f2(parsed.year < 1900 ? parsed.year : parsed.year)}/${f2(parsed.month)}/${f2(parsed.day)}`;
+  } catch(e){
+    console.error(e);
+  }
+}
+
+function formatRocBirth(str) {
+  let parsed = parseDateAny(str);
+  if(!parsed) return str || '';
+  let gYear = parsed.year < 1900 ? parsed.year + 1911 : parsed.year;
+  let rocY = gYear - 1911;
+  return `${String(rocY).padStart(2, '0')}/${String(parsed.month).padStart(2, '0')}/${String(parsed.day).padStart(2, '0')}`;
+}
+
+async function initSupabase(){
+  try {
+    sbClient = window.supabase.createClient(SB_URL, SB_KEY);
+    checkAuthStatus();
+  } catch(err){ console.error(err); }
+}
+
+async function checkAuthStatus(){
+  if(!sbClient) return;
+  const { data: { session } } = await sbClient.auth.getSession();
+  if(session && session.user){
+    document.getElementById('auth-logged-out-box').style.display = 'none';
+    document.getElementById('auth-logged-in-box').style.display = 'block';
+    document.getElementById('lbl-user-email').textContent = session.user.email;
+    await pullFromCloud(session.user.id);
+  } else {
+    document.getElementById('auth-logged-out-box').style.display = 'block';
+    document.getElementById('auth-logged-in-box').style.display = 'none';
+  }
+}
+
+document.getElementById('btn-supabase-login').addEventListener('click', async ()=>{
+  if(!sbClient) return;
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value.trim();
+  if(!email || !password){ showToast('請輸入帳號與密碼'); return; }
+  const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+  if(error){ showToast('登入失敗: ' + error.message); }
+  else { showToast('登入成功！'); checkAuthStatus(); }
+});
+
+document.getElementById('btn-supabase-register').addEventListener('click', async ()=>{
+  if(!sbClient) return;
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value.trim();
+  if(!email || !password){ showToast('請輸入帳號與密碼'); return; }
+  const { data, error } = await sbClient.auth.signUp({ email, password });
+  if(error){ showToast('註冊失敗: ' + error.message); }
+  else { showToast('註冊成功！請檢查信箱或直接登入'); }
+});
+
+document.getElementById('btn-supabase-logout').addEventListener('click', async ()=>{
+  if(!sbClient) return;
+  await sbClient.auth.signOut();
+  showToast('已登出');
+  checkAuthStatus();
+});
+
+async function pushToCloud(){
+  if(!sbClient) return;
+  const { data: { session } } = await sbClient.auth.getSession();
+  if(!session || !session.user) return;
+  const userId = session.user.id;
+
+  const payload = {
+    dharmaEvents, activeDharmaEvent, pilgrimageEvents, activePilgrimageEvent,
+    donationEvents, activeDonationEvent, categories, prices, zodiacYin, fontScale,
+    records, pilgrimages, donations, customDonationItems, carPlatesMap, customCarsMap
+  };
+
+  const { error } = await sbClient.from('app_state').upsert({
+    user_id: userId,
+    data: payload,
+    updated_at: new Date().toISOString()
+  });
+
+  if(error){ console.error('Cloud push error:', error); }
+}
+
+async function pullFromCloud(userId){
+  if(!sbClient) return;
+  const { data, error } = await sbClient.from('app_state').select('data').eq('user_id', userId).single();
+  if(data && data.data){
+    const d = data.data;
+    if(d.dharmaEvents) dharmaEvents = d.dharmaEvents;
+    if(d.activeDharmaEvent) activeDharmaEvent = d.activeDharmaEvent;
+    if(d.pilgrimageEvents) pilgrimageEvents = d.pilgrimageEvents;
+    if(d.activePilgrimageEvent) activePilgrimageEvent = d.activePilgrimageEvent;
+    if(d.donationEvents) donationEvents = d.donationEvents;
+    if(d.activeDonationEvent) activeDonationEvent = d.activeDonationEvent;
+    if(d.categories) categories = d.categories;
+    if(d.prices) prices = d.prices;
+    if(d.zodiacYin) zodiacYin = d.zodiacYin;
+    if(d.fontScale) fontScale = d.fontScale;
+    if(d.records) records = d.records;
+    if(d.pilgrimages) pilgrimages = d.pilgrimages;
+    if(d.donations) donations = d.donations;
+    if(d.customDonationItems) customDonationItems = d.customDonationItems;
+    if(d.carPlatesMap) carPlatesMap = d.carPlatesMap;
+    if(d.customCarsMap) customCarsMap = d.customCarsMap;
+
+    applyFontScale(fontScale);
+    updateDonationItemsDatalist();
+    renderEventPills();
+    renderPilgrimageEventPills();
+    renderDonationEventPills();
+    renderCarPlatesConfig();
+    renderCatGrid({});
+    renderRecordTable();
+    renderPilgTable();
+    renderDonationTable();
+    showToast('已從雲端同步最新資料');
+  }
+}
+
+document.getElementById('btn-supabase-sync').addEventListener('click', async ()=>{
+  await pushToCloud();
+  showToast('已手動同步至雲端');
+});
+
+async function loadData(){
+  try{ const c = localStorage.getItem(LS_CATS); categories = c ? JSON.parse(c) : [...DEFAULT_CATS]; }catch(e){ categories = [...DEFAULT_CATS]; }
+  try{ const p = localStorage.getItem(LS_PRICES); prices = p ? {...DEFAULT_PRICES, ...JSON.parse(p)} : {...DEFAULT_PRICES}; }catch(e){ prices = {...DEFAULT_PRICES}; }
+  try{ const zy = localStorage.getItem(LS_ZODIAC_YIN); zodiacYin = zy ? {...DEFAULT_ZODIAC_YIN, ...JSON.parse(zy)} : {...DEFAULT_ZODIAC_YIN}; }catch(e){ zodiacYin = {...DEFAULT_ZODIAC_YIN}; }
+  try{ const fs = localStorage.getItem(LS_FONT_SCALE); if(fs) fontScale = parseFloat(fs) || 1; }catch(e){}
+
+  try{ const de = localStorage.getItem(LS_DHARMA_EVENTS); dharmaEvents = de ? JSON.parse(de) : ['115年中元普渡']; }catch(e){ dharmaEvents = ['115年中元普渡']; }
+  activeDharmaEvent = dharmaEvents[0] || '115年中元普渡';
+
+  try{ const pe = localStorage.getItem(LS_PILG_EVENTS); pilgrimageEvents = pe ? JSON.parse(pe) : ['115年進香大典']; }catch(e){ pilgrimageEvents = ['115年進香大典']; }
+  activePilgrimageEvent = pilgrimageEvents[0] || '115年進香大典';
+
+  try{ const doe = localStorage.getItem(LS_DON_EVENTS); donationEvents = doe ? JSON.parse(doe) : ['115年中元普渡', '順天太子聖誕']; }catch(e){ donationEvents = ['115年中元普渡', '順天太子聖誕']; }
+  activeDonationEvent = donationEvents[0] || '115年中元普渡';
+
+  try{ const r = localStorage.getItem(LS_RECORDS); records = r ? JSON.parse(r) : []; }catch(e){ records = []; }
+  try{ const pr = localStorage.getItem(LS_PILG_RECORDS); pilgrimages = pr ? JSON.parse(pr) : []; }catch(e){ pilgrimages = []; }
+  try{ const d = localStorage.getItem(LS_DONATIONS); donations = d ? JSON.parse(d) : []; }catch(e){ donations = []; }
+  try{ const di = localStorage.getItem(LS_DON_ITEMS); if(di) customDonationItems = JSON.parse(di); }catch(e){ customDonationItems = []; }
+  try{ const cp = localStorage.getItem(LS_CAR_PLATES); carPlatesMap = cp ? JSON.parse(cp) : {}; }catch(e){ carPlatesMap = {}; }
+  try{ const cc = localStorage.getItem(LS_CUSTOM_CARS); customCarsMap = cc ? JSON.parse(cc) : {}; }catch(e){ customCarsMap = {}; }
+
+  applyFontScale(fontScale);
+  updateDonationItemsDatalist();
+  renderEventPills();
+  renderPilgrimageEventPills();
+  renderDonationEventPills();
+  renderCarPlatesConfig();
+  document.getElementById('don-date').value = new Date().toISOString().slice(0, 10);
+  await initSupabase();
+}
+
+async function saveDataAll(){
+  localStorage.setItem(LS_CATS, JSON.stringify(categories));
+  localStorage.setItem(LS_PRICES, JSON.stringify(prices));
+  localStorage.setItem(LS_ZODIAC_YIN, JSON.stringify(zodiacYin));
+  localStorage.setItem(LS_DHARMA_EVENTS, JSON.stringify(dharmaEvents));
+  localStorage.setItem(LS_PILG_EVENTS, JSON.stringify(pilgrimageEvents));
+  localStorage.setItem(LS_DON_EVENTS, JSON.stringify(donationEvents));
+  localStorage.setItem(LS_RECORDS, JSON.stringify(records));
+  localStorage.setItem(LS_PILG_RECORDS, JSON.stringify(pilgrimages));
+  localStorage.setItem(LS_DONATIONS, JSON.stringify(donations));
+  localStorage.setItem(LS_DON_ITEMS, JSON.stringify(customDonationItems));
+  localStorage.setItem(LS_CAR_PLATES, JSON.stringify(carPlatesMap));
+  localStorage.setItem(LS_CUSTOM_CARS, JSON.stringify(customCarsMap));
+
+  await pushToCloud();
+}
+
+async function renameDharmaEvent(oldEv){
+  const newEv = prompt(`請輸入法會活動「${oldEv}」的新名稱：`, oldEv);
+  if(!newEv) return;
+  const name = newEv.trim();
+  if(!name || name === oldEv) return;
+  if(dharmaEvents.includes(name)){ showToast('此活動名稱已存在'); return; }
+
+  dharmaEvents = dharmaEvents.map(e => e === oldEv ? name : e);
+  records.forEach(r => {
+    if((r.event || dharmaEvents[0]) === oldEv) r.event = name;
+  });
+  if(activeDharmaEvent === oldEv) activeDharmaEvent = name;
+
+  await saveDataAll();
+  renderEventPills();
+  resetForm();
+  renderRecordTable();
+  showToast(`已將法會活動重新命名為：${name}`);
+}
+
+async function deleteDharmaEvent(ev){
+  if(dharmaEvents.length <= 1){ showToast('至少需保留一個法會活動'); return; }
+  if(!confirm(`確定要刪除法會活動「${ev}」及其相關登記資料嗎？`)) return;
+  dharmaEvents = dharmaEvents.filter(x => x !== ev);
+  records = records.filter(r => (r.event || dharmaEvents[0]) !== ev);
+  activeDharmaEvent = dharmaEvents[0];
+  await saveDataAll();
+  renderEventPills();
+  resetForm();
+  renderRecordTable();
+  showToast(`已刪除活動「${ev}」`);
+}
+
+function renderEventPills(){
+  const container = document.getElementById('dharma-pills');
+  container.innerHTML = dharmaEvents.map(ev => `
+    <span style="display:inline-flex;align-items:center;background:${ev === activeDharmaEvent ? 'var(--seal)' : '#fffdf7'};color:${ev === activeDharmaEvent ? '#fdf6ea' : 'var(--ink)'};border:1px solid var(--rule);border-radius:20px;padding:4px 10px;font-size:0.8125rem;font-family:'Noto Serif TC',serif;gap:6px;">
+      <span style="cursor:pointer;font-weight:${ev === activeDharmaEvent ? 'bold' : 'normal'};" onclick="switchDharmaEvent('${escapeAttr(ev)}')">${escapeHtml(ev)}</span>
+      <span style="cursor:pointer;font-size:0.7rem;color:${ev === activeDharmaEvent ? '#fdf6ea' : 'var(--gold)'};font-weight:bold;" onclick="renameDharmaEvent('${escapeAttr(ev)}')">✏️</span>
+      ${dharmaEvents.length > 1 ? `<span style="cursor:pointer;font-size:0.7rem;color:${ev === activeDharmaEvent ? '#fdf6ea' : '#b35256'};font-weight:bold;" onclick="deleteDharmaEvent('${escapeAttr(ev)}')">✕</span>` : ''}
+    </span>
+  `).join('') + `<button type="button" class="event-pill event-pill-add" onclick="addNewDharmaEvent()">＋ 新增法會活動</button>`;
+  document.getElementById('display-event-title').textContent = `順天太子會【${activeDharmaEvent}】資料管理系統`;
+}
+
+async function switchDharmaEvent(ev){
+  activeDharmaEvent = ev;
+  renderEventPills();
+  resetForm();
+  renderRecordTable();
+}
+
+async function addNewDharmaEvent(){
+  const newEv = prompt('請輸入新法會活動名稱：');
+  if(!newEv) return;
+  const evName = newEv.trim();
+  if(!evName) return;
+  if(dharmaEvents.includes(evName)){ showToast('此活動名稱已存在'); return; }
+
+  if(confirm(`是否要從舊活動匯入基本名冊（不含登記項目）？\n\n[確定] = 選擇匯入舊名冊\n[取消] = 建立空白新活動`)){
+    const oldEv = prompt(`請輸入要匯入基本名冊的舊活動名稱：\n現有活動: ${dharmaEvents.join(', ')}`, dharmaEvents[0]);
+    if(oldEv && dharmaEvents.includes(oldEv.trim())){
+      const targetOldEv = oldEv.trim();
+      const oldRecords = records.filter(r => (r.event || dharmaEvents[0]) === targetOldEv);
+      oldRecords.forEach(r => { records.push({ ...r, id: uid(), event: evName, entries: {} }); });
+      showToast(`已從「${targetOldEv}」匯入 ${oldRecords.length} 筆基本名冊`);
+    }
+  }
+
+  dharmaEvents.push(evName);
+  activeDharmaEvent = evName;
+  await saveDataAll();
+  renderEventPills();
+  resetForm();
+  renderRecordTable();
+  showToast(`已切換至新法會活動：${evName}`);
+}
+
+async function renamePilgrimageEvent(oldEv){
+  const newEv = prompt(`請輸入進香活動「${oldEv}」的新名稱：`, oldEv);
+  if(!newEv) return;
+  const name = newEv.trim();
+  if(!name || name === oldEv) return;
+  if(pilgrimageEvents.includes(name)){ showToast('此活動名稱已存在'); return; }
+
+  pilgrimageEvents = pilgrimageEvents.map(e => e === oldEv ? name : e);
+  pilgrimages.forEach(p => {
+    if((p.event || pilgrimageEvents[0]) === oldEv) p.event = name;
+  });
+  if(carPlatesMap[oldEv]){
+    carPlatesMap[name] = carPlatesMap[oldEv];
+    delete carPlatesMap[oldEv];
+  }
+  if(customCarsMap[oldEv]){
+    customCarsMap[name] = customCarsMap[oldEv];
+    delete customCarsMap[oldEv];
+  }
+  if(customCarsMap[oldEv + '_removed_defs']){
+    customCarsMap[name + '_removed_defs'] = customCarsMap[oldEv + '_removed_defs'];
+    delete customCarsMap[oldEv + '_removed_defs'];
+  }
+  if(activePilgrimageEvent === oldEv) activePilgrimageEvent = name;
+
+  await saveDataAll();
+  renderPilgrimageEventPills();
+  renderCarPlatesConfig();
+  renderPilgTable();
+  showToast(`已將進香活動重新命名為：${name}`);
+}
+
+async function deletePilgrimageEvent(ev){
+  if(pilgrimageEvents.length <= 1){ showToast('至少需保留一個進香活動'); return; }
+  if(!confirm(`確定要刪除進香活動「${ev}」及其相關名單嗎？`)) return;
+  pilgrimageEvents = pilgrimageEvents.filter(x => x !== ev);
+  pilgrimages = pilgrimages.filter(p => (p.event || pilgrimageEvents[0]) !== ev);
+  activePilgrimageEvent = pilgrimageEvents[0];
+  await saveDataAll();
+  renderPilgrimageEventPills();
+  renderCarPlatesConfig();
+  renderPilgTable();
+  showToast(`已刪除進香活動「${ev}」`);
+}
+
+function renderPilgrimageEventPills(){
+  const container = document.getElementById('pilgrimage-pills');
+  container.innerHTML = pilgrimageEvents.map(ev => `
+    <span style="display:inline-flex;align-items:center;background:${ev === activePilgrimageEvent ? 'var(--seal)' : '#fffdf7'};color:${ev === activePilgrimageEvent ? '#fdf6ea' : 'var(--ink)'};border:1px solid var(--rule);border-radius:20px;padding:4px 10px;font-size:0.8125rem;font-family:'Noto Serif TC',serif;gap:6px;">
+      <span style="cursor:pointer;font-weight:${ev === activePilgrimageEvent ? 'bold' : 'normal'};" onclick="switchPilgrimageEvent('${escapeAttr(ev)}')">${escapeHtml(ev)}</span>
+      <span style="cursor:pointer;font-size:0.7rem;color:${ev === activePilgrimageEvent ? '#fdf6ea' : 'var(--gold)'};font-weight:bold;" onclick="renamePilgrimageEvent('${escapeAttr(ev)}')">✏️</span>
+      ${pilgrimageEvents.length > 1 ? `<span style="cursor:pointer;font-size:0.7rem;color:${ev === activePilgrimageEvent ? '#fdf6ea' : '#b35256'};font-weight:bold;" onclick="deletePilgrimageEvent('${escapeAttr(ev)}')">✕</span>` : ''}
+    </span>
+  `).join('') + `<button type="button" class="event-pill event-pill-add" onclick="addNewPilgrimageEvent()">＋ 新增進香活動</button>`;
+}
+
+async function switchPilgrimageEvent(ev){
+  activePilgrimageEvent = ev;
+  renderPilgrimageEventPills();
+  renderCarPlatesConfig();
+  renderPilgTable();
+}
+
+async function addNewPilgrimageEvent(){
+  const newEv = prompt('請輸入新進香活動名稱：');
+  if(!newEv) return;
+  const evName = newEv.trim();
+  if(!evName) return;
+  if(pilgrimageEvents.includes(evName)){ showToast('此活動名稱已存在'); return; }
+
+  if(confirm(`是否要從舊進香活動匯入名冊（車次、車牌、房間號將留空）？\n\n[確定] = 選擇匯入舊名冊\n[取消] = 建立空白新活動`)){
+    const oldEv = prompt(`請輸入要匯入名冊的舊進香活動名稱：\n現有活動: ${pilgrimageEvents.join(', ')}`, pilgrimageEvents[0]);
+    if(oldEv && pilgrimageEvents.includes(oldEv.trim())){
+      const targetOldEv = oldEv.trim();
+      const oldPilgs = pilgrimages.filter(p => (p.event || pilgrimageEvents[0]) === targetOldEv);
+      oldPilgs.forEach(p => {
+        pilgrimages.push({
+          ...p,
+          id: uid(),
+          event: evName,
+          bus: '',
+          plate: '',
+          room: '',
+          parentId: '',
+          note: ''
+        });
+      });
+      showToast(`已從「${targetOldEv}」匯入 ${oldPilgs.length} 筆進香名冊`);
+    }
+  }
+
+  pilgrimageEvents.push(evName);
+  activePilgrimageEvent = evName;
+  await saveDataAll();
+  renderPilgrimageEventPills();
+  renderCarPlatesConfig();
+  renderPilgTable();
+  showToast(`已切換至進香活動：${evName}`);
+}
+
+async function renameDonationEvent(oldEv){
+  const newEv = prompt(`請輸入捐款活動「${oldEv}」的新名稱：`, oldEv);
+  if(!newEv) return;
+  const name = newEv.trim();
+  if(!name || name === oldEv) return;
+  if(donationEvents.includes(name)){ showToast('此活動名稱已存在'); return; }
+
+  donationEvents = donationEvents.map(e => e === oldEv ? name : e);
+  donations.forEach(d => {
+    if((d.event || donationEvents[0]) === oldEv) d.event = name;
+  });
+  if(activeDonationEvent === oldEv) activeDonationEvent = name;
+
+  await saveDataAll();
+  renderDonationEventPills();
+  renderDonationTable();
+  showToast(`已將捐款活動重新命名為：${name}`);
+}
+
+async function deleteDonationEvent(ev){
+  if(donationEvents.length <= 1){ showToast('至少需保留一個捐款活動'); return; }
+  if(!confirm(`確定要刪除捐款活動「${ev}」及其相關捐款紀錄嗎？`)) return;
+  donationEvents = donationEvents.filter(x => x !== ev);
+  donations = donations.filter(d => (d.event || donationEvents[0]) !== ev);
+  activeDonationEvent = donationEvents[0];
+  await saveDataAll();
+  renderDonationEventPills();
+  renderDonationTable();
+  showToast(`已刪除捐款活動「${ev}」`);
+}
+
+function renderDonationEventPills(){
+  const container = document.getElementById('donation-pills');
+  container.innerHTML = donationEvents.map(ev => `
+    <span style="display:inline-flex;align-items:center;background:${ev === activeDonationEvent ? 'var(--seal)' : '#fffdf7'};color:${ev === activeDonationEvent ? '#fdf6ea' : 'var(--ink)'};border:1px solid var(--rule);border-radius:20px;padding:4px 10px;font-size:0.8125rem;font-family:'Noto Serif TC',serif;gap:6px;">
+      <span style="cursor:pointer;font-weight:${ev === activeDonationEvent ? 'bold' : 'normal'};" onclick="switchDonationEvent('${escapeAttr(ev)}')">${escapeHtml(ev)}</span>
+      <span style="cursor:pointer;font-size:0.7rem;color:${ev === activeDonationEvent ? '#fdf6ea' : 'var(--gold)'};font-weight:bold;" onclick="renameDonationEvent('${escapeAttr(ev)}')">✏️</span>
+      ${donationEvents.length > 1 ? `<span style="cursor:pointer;font-size:0.7rem;color:${ev === activeDonationEvent ? '#fdf6ea' : '#b35256'};font-weight:bold;" onclick="deleteDonationEvent('${escapeAttr(ev)}')">✕</span>` : ''}
+    </span>
+  `).join('') + `<button type="button" class="event-pill event-pill-add" onclick="addNewDonationEvent()">＋ 新增捐款活動</button>`;
+}
+
+async function switchDonationEvent(ev){
+  activeDonationEvent = ev;
+  renderDonationEventPills();
+  renderDonationTable();
+}
+
+async function addNewDonationEvent(){
+  const newEv = prompt('請輸入新捐款活動名稱：');
+  if(!newEv) return;
+  const evName = newEv.trim();
+  if(!evName) return;
+  if(donationEvents.includes(evName)){ showToast('此活動名稱已存在'); return; }
+  donationEvents.push(evName);
+  activeDonationEvent = evName;
+  await saveDataAll();
+  renderDonationEventPills();
+  renderDonationTable();
+  showToast(`已切換至捐款活動：${evName}`);
+}
+
+function applyFontScale(val){
+  fontScale = Math.min(Math.max(val, 0.8), 1.8);
+  document.documentElement.style.setProperty('--base-scale', fontScale);
+  document.getElementById('font-scale-range').value = fontScale;
+  document.getElementById('font-scale-val').textContent = Math.round(fontScale * 100) + '%';
+  localStorage.setItem(LS_FONT_SCALE, fontScale);
+}
+
+document.getElementById('font-scale-range').addEventListener('input', (e)=>{ applyFontScale(parseFloat(e.target.value)); });
+document.getElementById('btn-font-dec').addEventListener('click', ()=>{ applyFontScale(fontScale - 0.05); });
+document.getElementById('btn-font-inc').addEventListener('click', ()=>{ applyFontScale(fontScale + 0.05); });
+
+function getYinSummary(item){
+  const debt = Number(item.yinDebt) || 0;
+  const repaid = (item.repays || []).reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  const remain = debt - repaid;
+  return { debt, repaid, remain };
+}
+
+function formatYinStatus(item){
+  const sum = getYinSummary(item);
+  if(sum.debt === 0) return '—';
+  if(sum.remain < 0) return `欠:${sum.debt} | 已還:${sum.repaid} | 已還清 (溢還 ${Math.abs(sum.remain)})`;
+  if(sum.remain === 0) return `欠:${sum.debt} | 已還:${sum.repaid} | 已還清`;
+  return `欠:${sum.debt} | 已還:${sum.repaid} | 未還:${sum.remain}`;
+}
+
+function getPastEventsForItemAndNames(catName, namesArr){
+  if(!namesArr || namesArr.length === 0) return [];
+  const pastEvents = new Set();
+  records.forEach(r => {
+    const ev = r.event || dharmaEvents[0];
+    if(ev !== activeDharmaEvent && r.entries && r.entries[catName]){
+      const entry = r.entries[catName];
+      let matched = false;
+      if(namesArr.includes(r.name)) matched = true;
+      if(r.members && r.members.some(m => namesArr.includes(m.name))) matched = true;
+      if(entry.members && entry.members.some(m => namesArr.includes(m))) matched = true;
+      if(matched) pastEvents.add(ev);
+    }
+  });
+  return Array.from(pastEvents);
+}
+
+document.getElementById('f-name').addEventListener('input', (e)=>{
+  const n = e.target.value.trim();
+  const tip = document.getElementById('past-participation-tip');
+  const pasts = [];
+  records.forEach(r => {
+    const ev = r.event || dharmaEvents[0];
+    if(ev !== activeDharmaEvent && (r.name === n || (r.members && r.members.some(m => m.name === n)))) pasts.push(ev);
+  });
+  if(pasts.length > 0){
+    tip.style.display = 'block';
+    tip.textContent = `💡 歷史參與紀錄：曾參加過 【${Array.from(new Set(pasts)).join('、')}】`;
+  } else {
+    tip.style.display = 'none';
+  }
+  renderCatGrid(collectCurrentEntries());
+});
+
+document.getElementById('f-zodiac').addEventListener('change', (e)=>{
+  const z = e.target.value;
+  if(z && zodiacYin[z] != null){
+    document.getElementById('f-yin-debt').value = zodiacYin[z];
+    showToast(`已帶入生肖【${z}】陰債：${zodiacYin[z]}`);
+  }
+});
+
+document.getElementById('btn-manage-zodiac-yin').addEventListener('click', async ()=>{
+  let listStr = Object.keys(DEFAULT_ZODIAC_YIN).map(z => `${z}: ${zodiacYin[z] || 0} 貫`).join('\n');
+  const targetZodiac = prompt(`請輸入欲修改對照金額的生肖：\n\n${listStr}`);
+  if(!targetZodiac) return;
+  const z = targetZodiac.trim();
+  if(!DEFAULT_ZODIAC_YIN.hasOwnProperty(z)){ showToast('生肖名稱不正確'); return; }
+  const newVal = parseFloat(prompt(`請輸入生肖【${z}】的欠陰債金額：`, zodiacYin[z]));
+  if(isNaN(newVal) || newVal < 0){ showToast('請輸入有效金額'); return; }
+  zodiacYin[z] = newVal;
+  await saveDataAll();
+  showToast(`已更新生肖【${z}】對照金額`);
+});
+
+async function editDefaultPrice(catName){
+  const currentPrice = prices[catName] ?? 0;
+  const newPrice = parseFloat(prompt(`請輸入項目「${catName}」的新預設單價：`, currentPrice));
+  if(isNaN(newPrice) || newPrice < 0) return;
+  prices[catName] = newPrice;
+  await saveDataAll();
+  renderCatGrid(collectCurrentEntries());
+  showToast(`已更新「${catName}」預設單價`);
+}
+
+document.querySelectorAll('#mode-switch-bar button').forEach(btn => {
+  btn.addEventListener('click', () => switchMode(btn.dataset.mode));
+});
+
+function switchMode(mode){
+  currentFormMode = mode;
+  document.querySelectorAll('#mode-switch-bar button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  if(mode === 'single'){
+    document.getElementById('section-single-mode').style.display = 'block';
+    document.getElementById('section-family-mode').style.display = 'none';
+    document.getElementById('lbl-cat-section').textContent = '個人登記項目（勾選後設定數量與備註）';
+  } else {
+    document.getElementById('section-single-mode').style.display = 'none';
+    document.getElementById('section-family-mode').style.display = 'block';
+    document.getElementById('lbl-cat-section').textContent = '家庭登記項目（全戶勾選，可指定家庭成員）';
+    if(tempFamilyMembers.length === 0) addFamilyMember();
+  }
+  renderCatGrid(collectCurrentEntries());
+}
+
+function renderSingleRepayInputs(){
+  const container = document.getElementById('yin-repay-list');
+  container.innerHTML = tempSingleRepays.map((r, i) => `
+    <div class="cat-note-row" style="margin-bottom:6px;">
+      <input type="date" value="${r.date||''}" onchange="tempSingleRepays[${i}].date=this.value" style="width:130px;">
+      <input type="number" placeholder="還款金額" value="${r.amount||''}" onchange="tempSingleRepays[${i}].amount=Number(this.value)" style="width:110px;">
+      <input type="text" placeholder="備註" value="${escapeAttr(r.note||'')}" onchange="tempSingleRepays[${i}].note=this.value" style="flex:1;">
+      <button type="button" class="btn btn-danger btn-sm" onclick="tempSingleRepays.splice(${i},1);renderSingleRepayInputs();">✕</button>
+    </div>
+  `).join('');
+}
+
+document.getElementById('btn-add-repay').addEventListener('click', ()=>{
+  tempSingleRepays.push({ date: new Date().toISOString().slice(0,10), amount: 0, note: '' });
+  renderSingleRepayInputs();
+});
+
+function addFamilyMember(data){
+  const m = data || { id: uid(), name: '', idNumber: '', relation: '', zodiac: '', solarBirth: '', rocBirth: '', lunarBirth: '', yinDebt: 0, repays: [] };
+  tempFamilyMembers.push(m);
+  renderFamilyMembers();
+  renderCatGrid(collectCurrentEntries());
+}
+
+document.getElementById('btn-add-member').addEventListener('click', ()=> addFamilyMember());
+
+function renderFamilyMembers(){
+  const container = document.getElementById('family-members-container');
+  container.innerHTML = tempFamilyMembers.map((m, idx) => {
+    const zodiacOpts = ['', '鼠','牛','虎','兔','龍','蛇','馬','羊','猴','雞','狗','豬'].map(z => 
+      `<option value="${z}" ${m.zodiac===z?'selected':''}>${z ? z + (zodiacYin[z]?` (${zodiacYin[z]}貫)`:'') : '-- 請選擇生肖 --'}</option>`
+    ).join('');
+
+    const repaysHtml = (m.repays || []).map((r, ri) => `
+      <div class="cat-note-row" style="margin-top:4px;">
+        <input type="date" value="${r.date||''}" onchange="tempFamilyMembers[${idx}].repays[${ri}].date=this.value" style="width:125px;">
+        <input type="number" placeholder="金額" value="${r.amount||''}" onchange="tempFamilyMembers[${idx}].repays[${ri}].amount=Number(this.value)" style="width:90px;">
+        <input type="text" placeholder="備註" value="${escapeAttr(r.note||'')}" onchange="tempFamilyMembers[${idx}].repays[${ri}].note=this.value" style="flex:1;">
+        <button type="button" class="btn btn-danger btn-sm" onclick="tempFamilyMembers[${idx}].repays.splice(${ri},1);renderFamilyMembers();">✕</button>
+      </div>
+    `).join('');
+
+    return `
+      <div class="member-card">
+        <div class="member-card-head">
+          <span class="member-title">成員 #${idx + 1}</span>
+          <button type="button" class="btn btn-danger btn-sm" onclick="tempFamilyMembers.splice(${idx},1);renderFamilyMembers();renderCatGrid(collectCurrentEntries());">刪除成員</button>
+        </div>
+        <div class="grid-4">
+          <label class="field" style="margin-bottom:8px;"><span class="lbl">成員姓名 *</span><input type="text" value="${escapeAttr(m.name)}" oninput="tempFamilyMembers[${idx}].name=this.value; renderCatGrid(collectCurrentEntries());" placeholder="姓名"></label>
+          <label class="field" style="margin-bottom:8px;"><span class="lbl">身分證字號</span><input type="text" value="${escapeAttr(m.idNumber||'')}" oninput="tempFamilyMembers[${idx}].idNumber=this.value" placeholder="身分證"></label>
+          <label class="field" style="margin-bottom:8px;"><span class="lbl">稱謂/關係</span><input type="text" value="${escapeAttr(m.relation||'')}" oninput="tempFamilyMembers[${idx}].relation=this.value" placeholder="如：長子"></label>
+          <label class="field" style="margin-bottom:8px;"><span class="lbl">生肖 / 陰債</span><select onchange="onMemberZodiacChange(${idx}, this.value)">${zodiacOpts}</select></label>
+        </div>
+        <div class="grid-3" style="margin-top:4px;">
+          <label class="field" style="margin-bottom:8px;"><span class="lbl">國曆生日</span><input type="text" value="${m.solarBirth||''}" onblur="updateFamilyMemberDate(${idx}, 'solar', this.value)" placeholder="1966/10/06"></label>
+          <label class="field" style="margin-bottom:8px;"><span class="lbl">民國生日</span><input type="text" value="${escapeAttr(m.rocBirth||'')}" onblur="updateFamilyMemberDate(${idx}, 'roc', this.value)" placeholder="55/10/06"></label>
+          <label class="field" style="margin-bottom:8px;"><span class="lbl">農曆生日</span><input type="text" value="${escapeAttr(m.lunarBirth||'')}" onblur="updateFamilyMemberDate(${idx}, 'lunar', this.value)" placeholder="55/09/03"></label>
+        </div>
+        <div class="grid-2" style="margin-top:4px;">
+          <label class="field" style="margin-bottom:8px;"><span class="lbl">欠陰債貫數</span><input type="number" value="${m.yinDebt||''}" oninput="tempFamilyMembers[${idx}].yinDebt=Number(this.value)" placeholder="0"></label>
+        </div>
+        <div style="font-size:0.75rem;color:var(--ink-soft);margin-top:6px;">還款紀錄：<button type="button" class="btn btn-ghost btn-sm" style="padding:1px 6px;margin-left:6px;" onclick="addMemberRepay(${idx})">＋ 還款</button></div>
+        ${repaysHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+function updateFamilyMemberDate(idx, type, val){
+  let parsed = parseDateAny(val);
+  if(!parsed) return;
+  const SolarCls = window.Solar || window.lunar?.Solar;
+  const LunarCls = window.Lunar || window.lunar?.Lunar;
+  if (!SolarCls || !LunarCls) return;
+  try {
+    let solar, lunar;
+    let gy, gm, gd, rocY, ly, lm, ld;
+    let year = parsed.year;
+    let month = parsed.month;
+    let day = parsed.day;
+
+    if (type === 'solar' || type === 'roc') {
+      let gYear = year < 1900 ? year + 1911 : year;
+      solar = SolarCls.fromYmd(gYear, month, day);
+      lunar = solar.getLunar();
+    } else if (type === 'lunar') {
+      let lYear = year < 1900 ? year + 1911 : year;
+      lunar = LunarCls.fromYmd(lYear, month, day);
+      solar = lunar.getSolar();
+    }
+    gy = solar.getYear(); gm = solar.getMonth(); gd = solar.getDay();
+    rocY = gy - 1911;
+    ly = lunar.getYear(); lm = Math.abs(lunar.getMonth()); ld = lunar.getDay();
+
+    let f2 = n => String(n).padStart(2, '0');
+    tempFamilyMembers[idx].solarBirth = `${gy}/${f2(gm)}/${f2(gd)}`;
+    tempFamilyMembers[idx].rocBirth = `${f2(rocY)}/${f2(gm)}/${f2(gd)}`;
+    tempFamilyMembers[idx].lunarBirth = `${f2(ly - 1911)}/${f2(lm)}/${f2(ld)}`;
+    
+    let zodiacName = lunar.getYearShengXiao();
+    if(zodiacName){
+      tempFamilyMembers[idx].zodiac = zodiacName;
+      if(zodiacYin[zodiacName] != null){
+        tempFamilyMembers[idx].yinDebt = zodiacYin[zodiacName];
+      }
+    }
+
+    renderFamilyMembers();
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function onMemberZodiacChange(idx, z){
+  tempFamilyMembers[idx].zodiac = z;
+  if(z && zodiacYin[z] != null){
+    tempFamilyMembers[idx].yinDebt = zodiacYin[z];
+    renderFamilyMembers();
+  }
+}
+
+function addMemberRepay(idx){
+  tempFamilyMembers[idx].repays.push({ date: new Date().toISOString().slice(0,10), amount: 0, note: '' });
+  renderFamilyMembers();
+}
+
+function renderCatGrid(existingEntries){
+  existingEntries = existingEntries || {};
+  const grid = document.getElementById('cat-grid');
+  grid.innerHTML = '';
+  const activeMembers = tempFamilyMembers.map(m => m.name.trim()).filter(Boolean);
+  const currentNames = currentFormMode === 'single' 
+    ? [document.getElementById('f-name')?.value?.trim()].filter(Boolean)
+    : activeMembers;
+
+  categories.forEach(cat=>{
+    const has = Object.prototype.hasOwnProperty.call(existingEntries, cat);
+    const existing = has ? existingEntries[cat] : null;
+    const noteVal = existing ? (existing.note || '') : '';
+    const countVal = existing && existing.count ? existing.count : 1;
+    const priceVal = existing && existing.price != null ? existing.price : (prices[cat] ?? 0);
+    const selectedMembers = existing && Array.isArray(existing.members) ? existing.members : [];
+    const isCustom = !DEFAULT_CATS.includes(cat);
+
+    const pastEvs = getPastEventsForItemAndNames(cat, currentNames);
+    const pastTipHtml = pastEvs.length > 0 
+      ? `<div style="font-size:0.7rem;color:var(--gold);margin-top:4px;font-weight:bold;background:#fff8e6;padding:3px 6px;border-radius:4px;border:1px dashed var(--gold);">💡 曾於 [${pastEvs.join('、')}] 參加過此項目</div>` 
+      : '';
+
+    let memberPickerHtml = '';
+    if(currentFormMode === 'family'){
+      const chipsHtml = activeMembers.length > 0 
+        ? activeMembers.map(mName => `<span class="member-chip ${selectedMembers.includes(mName)?'selected':''}" data-cat="${escapeAttr(cat)}" data-member="${escapeAttr(mName)}">${escapeHtml(mName)}</span>`).join('')
+        : '<span style="font-size:0.6875rem;color:#888;">(請先於上方填寫家庭成員姓名)</span>';
+
+      memberPickerHtml = `
+        <div class="member-select-wrap">
+          <span class="member-select-lbl">👥 點選參與成員：</span>
+          <div class="member-chip-group">${chipsHtml}</div>
+        </div>
+      `;
+    }
+
+    const wrap = document.createElement('div');
+    wrap.className = 'cat-item' + (has ? ' checked' : '');
+    wrap.innerHTML = `
+      ${isCustom ? `<button type="button" class="btn-del-cat" data-del-cat="${escapeAttr(cat)}">✕</button>` : ''}
+      <label class="cat-head">
+        <input type="checkbox" data-cat="${escapeAttr(cat)}" ${has?'checked':''}>
+        <span class="cat-title">${escapeHtml(cat)}</span>
+        <div class="cat-price-wrap">
+          <span class="cat-price-tag">${formatMoney(prices[cat]||0)}</span>
+          <button type="button" class="btn-edit-price" data-edit-price="${escapeAttr(cat)}" title="修改預設單價">✏️</button>
+        </div>
+      </label>
+      ${pastTipHtml}
+      <div class="cat-note">
+        ${memberPickerHtml}
+        <div class="cat-note-row" style="margin-top:4px;">
+          <span style="font-size:12px;color:var(--ink-soft);">數量:</span>
+          <input type="number" min="1" data-count="${escapeAttr(cat)}" value="${countVal}" style="width:65px;">
+          <span style="font-size:12px;color:var(--ink-soft);">單價:</span>
+          <input type="number" data-price="${escapeAttr(cat)}" value="${priceVal}" style="width:80px;">
+        </div>
+        <div class="cat-note-row">
+          <input type="text" data-note="${escapeAttr(cat)}" placeholder="備註（選填）" value="${escapeAttr(noteVal)}" style="flex:1;">
+        </div>
+      </div>`;
+
+    wrap.querySelector('input[type=checkbox]').addEventListener('change', (e)=>{ wrap.classList.toggle('checked', e.target.checked); });
+    wrap.querySelector('[data-edit-price]').addEventListener('click', (e)=>{ e.stopPropagation(); editDefaultPrice(cat); });
+    if(isCustom) wrap.querySelector('[data-del-cat]').addEventListener('click', (e)=>{ e.stopPropagation(); deleteCustomCategory(cat); });
+
+    wrap.querySelectorAll('.member-chip').forEach(chip => {
+      chip.addEventListener('click', (e)=>{
+        e.preventDefault(); e.stopPropagation();
+        chip.classList.toggle('selected');
+      });
+    });
+
+    grid.appendChild(wrap);
+  });
+}
+
+async function deleteCustomCategory(catName){
+  if(!confirm(`確定要刪除「${catName}」嗎？`)) return;
+  categories = categories.filter(c => c !== catName);
+  delete prices[catName];
+  records.forEach(r => { if(r.entries) delete r.entries[catName]; });
+  await saveDataAll();
+  renderCatGrid(collectCurrentEntries()); renderRecordTable();
+}
+
+document.getElementById('btn-addcat').addEventListener('click', async ()=>{
+  const input = document.getElementById('f-newcat');
+  const priceInput = document.getElementById('f-newcat-price');
+  const name = input.value.trim();
+  const priceNum = parseFloat(priceInput.value);
+  if(!name){ showToast('請輸入項目名稱'); return; }
+  if(categories.includes(name)){ showToast('此項目已存在'); return; }
+  categories.push(name);
+  prices[name] = isNaN(priceNum) ? 0 : priceNum;
+  await saveDataAll();
+  input.value = ''; priceInput.value = '';
+  renderCatGrid(collectCurrentEntries());
+  showToast(`已新增項目「${name}」`);
+});
+
+function collectCurrentEntries(){
+  const entries = {};
+  document.querySelectorAll('#cat-grid .cat-item').forEach(item=>{
+    const cb = item.querySelector('input[type=checkbox]');
+    if(cb && cb.checked){
+      const cat = cb.dataset.cat;
+      const countInput = item.querySelector(`input[data-count="${cat}"]`);
+      const priceInput = item.querySelector(`input[data-price="${cat}"]`);
+      const noteInput = item.querySelector(`input[data-note="${cat}"]`);
+      const selMembers = [];
+      item.querySelectorAll(`.member-chip.selected[data-cat="${cat}"]`).forEach(chip => selMembers.push(chip.dataset.member));
+
+      entries[cat] = {
+        count: Math.max(1, parseInt(countInput.value) || 1),
+        price: parseFloat(priceInput.value) || 0,
+        note: noteInput.value.trim(),
+        members: selMembers
+      };
+    }
+  });
+  return entries;
+}
+
+function getItemEntryTotal(entry){
+  if(!entry) return 0;
+  const count = Number(entry.count) || 1;
+  const price = Number(entry.price) || 0;
+  const members = entry.members || [];
+  if(members.length > 0) return price * count * members.length;
+  return price * count;
+}
+
+function getItemEntryCount(entry){
+  if(!entry) return 0;
+  const count = Number(entry.count) || 1;
+  const members = entry.members || [];
+  if(members.length > 0) return count * members.length;
+  return count;
+}
+
+function recordTotal(entries){
+  return Object.values(entries||{}).reduce((sum, e) => sum + getItemEntryTotal(e), 0);
+}
+
+function recordTotalCount(entries){
+  return Object.values(entries||{}).reduce((sum, e) => sum + getItemEntryCount(e), 0);
+}
+
+function formatMoney(n){ return 'NT$ ' + Number(n||0).toLocaleString(); }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+function uid(){ return 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+document.getElementById('btn-save').addEventListener('click', async ()=>{
+  const entries = collectCurrentEntries();
+
+  if(currentFormMode === 'single'){
+    const name = document.getElementById('f-name').value.trim();
+    if(!name){ showToast('請輸入姓名'); return; }
+
+    const phone = document.getElementById('f-phone').value.trim();
+    const idNumber = document.getElementById('f-id-number').value.trim();
+    const zodiac = document.getElementById('f-zodiac').value;
+    const tag = document.getElementById('f-single-tag').value.trim();
+    const solarBirth = document.getElementById('f-solar-birth').value.trim();
+    const rocBirth = formatRocBirth(document.getElementById('f-roc-birth').value);
+    const lunarBirth = document.getElementById('f-lunar-birth').value.trim();
+    const address = document.getElementById('f-address').value.trim();
+    const companyName = document.getElementById('f-company-name').value.trim();
+    const companyAddress = document.getElementById('f-company-address').value.trim();
+    const yinDebt = Number(document.getElementById('f-yin-debt').value) || 0;
+
+    if(editingId){
+      const rec = records.find(r=>r.id===editingId);
+      if(rec){
+        rec.event = activeDharmaEvent; rec.mode = 'single'; rec.name = name; rec.phone = phone; rec.idNumber = idNumber;
+        rec.zodiac = zodiac; rec.tag = tag; rec.solarBirth = solarBirth; rec.rocBirth = rocBirth;
+        rec.lunarBirth = lunarBirth; rec.address = address; rec.companyName = companyName;
+        rec.companyAddress = companyAddress; rec.yinDebt = yinDebt; rec.repays = [...tempSingleRepays];
+        rec.members = []; rec.entries = entries;
+      }
+      showToast('已更新個人資料');
+    } else {
+      records.push({
+        id: uid(), event: activeDharmaEvent, mode: 'single', name, phone, idNumber, zodiac, tag,
+        solarBirth, rocBirth, lunarBirth, address, companyName, companyAddress,
+        yinDebt, repays: [...tempSingleRepays], members: [], entries, createdAt: Date.now()
+      });
+      showToast('已儲存個人登記');
+    }
+  } else {
+    const famHead = document.getElementById('f-fam-head').value.trim();
+    if(!famHead){ showToast('請輸入戶名或戶長姓名'); return; }
+    const famPhone = document.getElementById('f-fam-phone').value.trim();
+    const famAddress = document.getElementById('f-fam-address').value.trim();
+    const famCompanyName = document.getElementById('f-fam-company-name').value.trim();
+    const famCompanyAddress = document.getElementById('f-fam-company-address').value.trim();
+
+    if(tempFamilyMembers.length === 0){ showToast('請至少新增一位家庭成員'); return; }
+
+    if(editingId){
+      const rec = records.find(r=>r.id===editingId);
+      if(rec){
+        rec.event = activeDharmaEvent; rec.mode = 'family'; rec.name = famHead; rec.phone = famPhone;
+        rec.address = famAddress; rec.companyName = famCompanyName; rec.companyAddress = famCompanyAddress;
+        rec.members = JSON.parse(JSON.stringify(tempFamilyMembers));
+        rec.entries = entries; rec.yinDebt = 0; rec.repays = [];
+      }
+      showToast('已更新家庭戶頭資料');
+    } else {
+      records.push({
+        id: uid(), event: activeDharmaEvent, mode: 'family', name: famHead, phone: famPhone, address: famAddress,
+        companyName: famCompanyName, companyAddress: famCompanyAddress,
+        members: JSON.parse(JSON.stringify(tempFamilyMembers)), entries, createdAt: Date.now()
+      });
+      showToast('已儲存家庭登記');
+    }
+  }
+
+  await saveDataAll();
+  resetForm();
+  renderRecordTable();
+});
+
+document.getElementById('btn-clear').addEventListener('click', resetForm);
+document.getElementById('btn-cancel-edit').addEventListener('click', resetForm);
+
+function resetForm(){
+  editingId = null;
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-phone').value = '';
+  document.getElementById('f-id-number').value = '';
+  document.getElementById('f-zodiac').value = '';
+  document.getElementById('f-single-tag').value = '';
+  document.getElementById('f-solar-birth').value = '';
+  document.getElementById('f-roc-birth').value = '';
+  document.getElementById('f-lunar-birth').value = '';
+  document.getElementById('f-address').value = '';
+  document.getElementById('f-company-name').value = '';
+  document.getElementById('f-company-address').value = '';
+  document.getElementById('f-yin-debt').value = '';
+  document.getElementById('past-participation-tip').style.display = 'none';
+  tempSingleRepays = [];
+  renderSingleRepayInputs();
+
+  document.getElementById('f-fam-head').value = '';
+  document.getElementById('f-fam-phone').value = '';
+  document.getElementById('f-fam-address').value = '';
+  document.getElementById('f-fam-company-name').value = '';
+  document.getElementById('f-fam-company-address').value = '';
+  tempFamilyMembers = [];
+  renderFamilyMembers();
+
+  switchMode('single');
+  document.getElementById('form-heading').textContent = '新增登記';
+  document.getElementById('btn-cancel-edit').style.display = 'none';
+  document.getElementById('btn-save').textContent = '儲存';
+  renderCatGrid({});
+}
+
+function startEdit(id){
+  const rec = records.find(r=>r.id===id);
+  if(!rec) return;
+  editingId = id;
+
+  if(rec.mode === 'family'){
+    switchMode('family');
+    document.getElementById('f-fam-head').value = rec.name;
+    document.getElementById('f-fam-phone').value = rec.phone || '';
+    document.getElementById('f-fam-address').value = rec.address || '';
+    document.getElementById('f-fam-company-name').value = rec.companyName || '';
+    document.getElementById('f-fam-company-address').value = rec.companyAddress || '';
+    tempFamilyMembers = JSON.parse(JSON.stringify(rec.members || []));
+    renderFamilyMembers();
+  } else {
+    switchMode('single');
+    document.getElementById('f-name').value = rec.name;
+    document.getElementById('f-phone').value = rec.phone || '';
+    document.getElementById('f-id-number').value = rec.idNumber || '';
+    document.getElementById('f-zodiac').value = rec.zodiac || '';
+    document.getElementById('f-single-tag').value = rec.tag || '';
+    document.getElementById('f-solar-birth').value = rec.solarBirth || '';
+    document.getElementById('f-roc-birth').value = rec.rocBirth || '';
+    document.getElementById('f-lunar-birth').value = rec.lunarBirth || '';
+    document.getElementById('f-address').value = rec.address || '';
+    document.getElementById('f-company-name').value = rec.companyName || '';
+    document.getElementById('f-company-address').value = rec.companyAddress || '';
+    document.getElementById('f-yin-debt').value = rec.yinDebt || '';
+    tempSingleRepays = JSON.parse(JSON.stringify(rec.repays || []));
+    renderSingleRepayInputs();
+  }
+
+  document.getElementById('form-heading').textContent = '編輯登記：' + rec.name;
+  document.getElementById('btn-cancel-edit').style.display = 'inline-block';
+  document.getElementById('btn-save').textContent = '更新';
+  renderCatGrid(rec.entries);
+  document.querySelector('[data-tab="input"]').click();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function deleteRecord(id){
+  const rec = records.find(r=>r.id===id);
+  if(!rec) return;
+  if(!confirm(`確定要刪除「${rec.name}」的資料嗎？`)) return;
+  records = records.filter(r=>r.id!==id);
+  await saveDataAll();
+  renderRecordTable();
+  showToast('已刪除');
+}
+
+function renderRecordTable(){
+  const tbody = document.getElementById('record-table');
+  const empty = document.getElementById('record-empty');
+  const activeRecords = records.filter(r => (r.event || dharmaEvents[0]) === activeDharmaEvent);
+
+  document.getElementById('record-count').textContent = activeRecords.length;
+  tbody.innerHTML = '';
+
+  if(activeRecords.length === 0){
+    empty.style.display = 'block';
+    document.getElementById('grand-total').textContent = formatMoney(0);
+    return;
+  }
+  empty.style.display = 'none';
+  let grandTotal = 0;
+
+  activeRecords.slice().sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant')).forEach(rec=>{
+    const tr = document.createElement('tr');
+    const cats = Object.keys(rec.entries || {});
+    const subtotal = recordTotal(rec.entries);
+    grandTotal += subtotal;
+
+    const stamps = cats.length
+      ? cats.map(c=>{
+          const e = rec.entries[c] || {};
+          const itemTot = getItemEntryTotal(e);
+          const totalCnt = getItemEntryCount(e);
+          const cntTxt = totalCnt > 1 ? ` ×${totalCnt}` : '';
+          const memTxt = e.members && e.members.length ? `<br><span style="color:#7d7562;font-size:10px;">[${e.members.join(', ')}]</span>` : '';
+          const noteTxt = e.note ? (`<small>(${escapeHtml(e.note)})</small>`) : '';
+          return `<span class="stamp">${escapeHtml(c)}${cntTxt} · ${formatMoney(itemTot)}${noteTxt}${memTxt}</span>`;
+        }).join('')
+      : '<span style="color:var(--ink-soft);font-size:12px;">（無登記項目）</span>';
+
+    let nameCol = '', metaCol = '', yinCol = '';
+    const compTxt = (rec.companyName || rec.companyAddress) ? `<br><small style="color:var(--gold);">🏢 ${escapeHtml(rec.companyName||'')} ${escapeHtml(rec.companyAddress?`(${rec.companyAddress})`:'' )}</small>` : '';
+
+    if(rec.mode === 'family'){
+      const memList = (rec.members || []).map(m => `• <b>${escapeHtml(m.name)}</b> ${m.idNumber?`(${escapeHtml(m.idNumber)})`:''} ${m.relation?`[${m.relation}]`:''}`).join('<br>');
+      nameCol = `<span class="type-tag">家庭</span><b>${escapeHtml(rec.name)}</b><div style="font-size:11px;color:var(--gold);margin-top:2px;">📞 ${escapeHtml(rec.phone||'無電話')}</div><div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">${memList}</div>`;
+      metaCol = `<span style="font-size:12px;color:var(--ink-soft);">住址：${escapeHtml(rec.address || '—')}${compTxt}</span>`;
+      const yinPieces = (rec.members || []).filter(m => Number(m.yinDebt) > 0).map(m => `${escapeHtml(m.name)}: ${formatYinStatus(m)}`);
+      yinCol = yinPieces.length ? `<span style="font-size:11px;">${yinPieces.join('<br>')}</span>` : '—';
+    } else {
+      const tagTxt = rec.tag ? `<small style="color:var(--gold);"> [${escapeHtml(rec.tag)}]</small>` : '';
+      const zodiacTxt = rec.zodiac ? `<small style="color:var(--ink-soft);"> (屬${escapeHtml(rec.zodiac)})</small>` : '';
+      nameCol = `<span class="type-tag" style="background:#555;">個人</span><b>${escapeHtml(rec.name)}</b>${zodiacTxt}${tagTxt}`;
+      const phoneTxt = rec.phone ? `📞 ${escapeHtml(rec.phone)}<br>` : '';
+      const idTxt = rec.idNumber ? `身分證: ${escapeHtml(rec.idNumber)}<br>` : '';
+      const birthTxt = [rec.solarBirth?`國:${rec.solarBirth}`:'', rec.rocBirth?`民:${rec.rocBirth}`:'', rec.lunarBirth?`農:${rec.lunarBirth}`:''].filter(Boolean).join('<br>') || '—';
+      metaCol = `<span style="font-size:12px;color:var(--ink-soft);">${phoneTxt}${idTxt}${birthTxt}<br><small>${escapeHtml(rec.address||'')}</small>${compTxt}</span>`;
+      yinCol = Number(rec.yinDebt) > 0 ? `<span style="font-size:12px;">${formatYinStatus(rec)}</span>` : '—';
+    }
+
+    tr.innerHTML = `
+      <td>${nameCol}</td>
+      <td>${metaCol}</td>
+      <td>${yinCol}</td>
+      <td>${stamps}</td>
+      <td style="white-space:nowrap;"><b>${formatMoney(subtotal)}</b></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" data-edit="${rec.id}">編輯</button>
+        <button class="btn btn-danger btn-sm" data-del="${rec.id}" style="margin-top:4px;">刪除</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('grand-total').textContent = formatMoney(grandTotal);
+  tbody.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click', ()=>startEdit(b.dataset.edit)));
+  tbody.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', ()=>deleteRecord(b.dataset.del)));
+}
+
+// ==========================================
+// 🚩 2. 進香管理邏輯 (含群組階層)
+// ==========================================
+function getAllCarsForCurrentEvent(){
+  const removedDefs = customCarsMap[activePilgrimageEvent + '_removed_defs'] || [];
+  const activeDefaults = DEFAULT_CARS.filter(c => !removedDefs.includes(c));
+  const customList = customCarsMap[activePilgrimageEvent] || [];
+  const set = new Set([...activeDefaults, ...customList]);
+  return Array.from(set);
+}
+
+function renderCarPlatesConfig(){
+  const box = document.getElementById('car-plates-config-box');
+  if(!box) return;
+  carPlatesMap[activePilgrimageEvent] = carPlatesMap[activePilgrimageEvent] || {};
+  const currentMap = carPlatesMap[activePilgrimageEvent];
+  const allCars = getAllCarsForCurrentEvent();
+
+  box.innerHTML = allCars.map(car => {
+    return `
+      <div style="background:#fffdf7;border:1px solid var(--rule);padding:8px;border-radius:4px;display:flex;flex-direction:column;gap:4px;position:relative;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:bold;color:var(--seal-dark);font-size:0.8125rem;">🚌 ${escapeHtml(car)}</span>
+          <button type="button" class="btn-danger btn-sm" style="padding:1px 4px;font-size:0.65rem;" onclick="deleteCarTier('${escapeAttr(car)}')">刪除車次</button>
+        </div>
+        <input type="text" value="${escapeAttr(currentMap[car] || '')}" placeholder="車牌號碼" oninput="updateCarPlateConfig('${escapeAttr(car)}', this.value)">
+      </div>
+    `;
+  }).join('');
+  updatePilgBusSelect();
+  updatePlateDatalist();
+}
+
+async function deleteCarTier(car){
+  if(!confirm(`確定要刪除車次「${car}」嗎？`)) return;
+  if(DEFAULT_CARS.includes(car)){
+    customCarsMap[activePilgrimageEvent + '_removed_defs'] = customCarsMap[activePilgrimageEvent + '_removed_defs'] || [];
+    if(!customCarsMap[activePilgrimageEvent + '_removed_defs'].includes(car)){
+      customCarsMap[activePilgrimageEvent + '_removed_defs'].push(car);
+    }
+  }
+  if(customCarsMap[activePilgrimageEvent]){
+    customCarsMap[activePilgrimageEvent] = customCarsMap[activePilgrimageEvent].filter(x => x !== car);
+  }
+  if(carPlatesMap[activePilgrimageEvent]){
+    delete carPlatesMap[activePilgrimageEvent][car];
+  }
+  await saveDataAll();
+  renderCarPlatesConfig();
+  showToast(`已刪除車次「${car}」`);
+}
+
+document.getElementById('btn-add-car-tier').addEventListener('click', async ()=>{
+  const nameInput = document.getElementById('new-car-name');
+  const plateInput = document.getElementById('new-car-plate');
+  const carName = nameInput.value.trim();
+  const carPlate = plateInput.value.trim();
+
+  if(!carName){ showToast('請輸入車次名稱'); return; }
+  customCarsMap[activePilgrimageEvent] = customCarsMap[activePilgrimageEvent] || [];
+  if(!customCarsMap[activePilgrimageEvent].includes(carName)){
+    customCarsMap[activePilgrimageEvent].push(carName);
+  }
+  if(customCarsMap[activePilgrimageEvent + '_removed_defs']){
+    customCarsMap[activePilgrimageEvent + '_removed_defs'] = customCarsMap[activePilgrimageEvent + '_removed_defs'].filter(x => x !== carName);
+  }
+  if(carPlate){
+    carPlatesMap[activePilgrimageEvent] = carPlatesMap[activePilgrimageEvent] || {};
+    carPlatesMap[activePilgrimageEvent][carName] = carPlate;
+  }
+  await saveDataAll();
+  nameInput.value = ''; plateInput.value = '';
+  renderCarPlatesConfig();
+  showToast(`已新增／更新車次：${carName}`);
+});
+
+function updateCarPlateConfig(car, val){
+  carPlatesMap[activePilgrimageEvent] = carPlatesMap[activePilgrimageEvent] || {};
+  carPlatesMap[activePilgrimageEvent][car] = val.trim();
+  saveDataAll();
+  updatePlateDatalist();
+}
+
+function updatePilgBusSelect(){
+  const sel = document.getElementById('pilg-bus');
+  if(!sel) return;
+  const currentVal = sel.value;
+  const allCars = getAllCarsForCurrentEvent();
+  sel.innerHTML = allCars.map(car => `<option value="${escapeAttr(car)}">${escapeHtml(car)}</option>`).join('');
+  if(currentVal && allCars.includes(currentVal)) sel.value = currentVal;
+}
+
+function updatePlateDatalist(){
+  const dl = document.getElementById('plate-datalist');
+  if(!dl) return;
+  const currentMap = carPlatesMap[activePilgrimageEvent] || {};
+  const plates = new Set(Object.values(currentMap).filter(Boolean));
+  pilgrimages.filter(p => (p.event || pilgrimageEvents[0]) === activePilgrimageEvent).forEach(p => { if(p.plate) plates.add(p.plate); });
+  dl.innerHTML = Array.from(plates).map(plt => `<option value="${escapeAttr(plt)}">`).join('');
+}
+
+function updatePilgParentSelect(excludeId = null){
+  const sel = document.getElementById('pilg-parent-select');
+  if(!sel) return;
+  const currentVal = sel.value;
+  const activePilgs = pilgrimages.filter(p => (p.event || pilgrimageEvents[0]) === activePilgrimageEvent && p.id !== excludeId);
+  let html = `<option value="">-- 獨立個人 (無上級群組) --</option>`;
+  activePilgs.forEach(p => {
+    html += `<option value="${p.id}">群組帶隊人：${escapeHtml(p.name)} (${escapeHtml(p.bus||'未分車')})</option>`;
+  });
+  sel.innerHTML = html;
+  if(currentVal) sel.value = currentVal;
+}
+
+document.getElementById('pilg-bus').addEventListener('change', (e)=>{
+  const bus = e.target.value;
+  const currentMap = carPlatesMap[activePilgrimageEvent] || {};
+  if(currentMap[bus]) document.getElementById('pilg-plate').value = currentMap[bus];
+});
+
+function updatePilgImportSelect(){
+  const sel = document.getElementById('pilg-import-select');
+  if(!sel) return;
+  const activeRecords = records.filter(r => (r.event || dharmaEvents[0]) === activeDharmaEvent);
+  let html = `<option value="">-- 請選擇既有名冊人員快速帶入 --</option>`;
+  activeRecords.forEach(r => {
+    if(r.mode === 'single') html += `<option value="single::${r.id}">${escapeHtml(r.name)} (個人)</option>`;
+    else if(r.members) r.members.forEach(m => html += `<option value="member::${r.id}::${escapeAttr(m.name)}">${escapeHtml(m.name)} (來自戶頭：${escapeHtml(r.name)})</option>`);
+  });
+  sel.innerHTML = html;
+}
+
+document.getElementById('pilg-import-select').addEventListener('change', (e)=>{
+  const val = e.target.value;
+  if(!val) return;
+  const parts = val.split('::');
+  if(parts[0] === 'single'){
+    const rec = records.find(r => r.id === parts[1]);
+    if(rec){
+      document.getElementById('pilg-name').value = rec.name;
+      document.getElementById('pilg-id-number').value = rec.idNumber || '';
+      document.getElementById('pilg-phone').value = rec.phone || '';
+      document.getElementById('pilg-roc-birth').value = rec.rocBirth || rec.solarBirth || '';
+      showToast(`已帶入「${rec.name}」`);
+    }
+  } else if(parts[0] === 'member'){
+    const rec = records.find(r => r.id === parts[1]);
+    if(rec && rec.members){
+      const m = rec.members.find(x => x.name === parts[2]);
+      if(m){
+        document.getElementById('pilg-name').value = m.name;
+        document.getElementById('pilg-id-number').value = m.idNumber || '';
+        document.getElementById('pilg-phone').value = rec.phone || '';
+        document.getElementById('pilg-roc-birth').value = m.rocBirth || m.solarBirth || '';
+        showToast(`已帶入成員「${m.name}」`);
+      }
+    }
+  }
+  e.target.value = '';
+});
+
+// 儲存進香人員，同步帶入法會登記
+document.getElementById('btn-pilg-save').addEventListener('click', async ()=>{
+  const name = document.getElementById('pilg-name').value.trim();
+  const phone = document.getElementById('pilg-phone').value.trim();
+  if(!name){ showToast('請輸入姓名'); return; }
+
+  const idNumber = document.getElementById('pilg-id-number').value.trim();
+  const birth = formatRocBirth(document.getElementById('pilg-roc-birth').value);
+  const parentId = document.getElementById('pilg-parent-select').value;
+  const bus = document.getElementById('pilg-bus').value;
+  const plate = document.getElementById('pilg-plate').value.trim();
+  const room = document.getElementById('pilg-room').value.trim();
+  const note = document.getElementById('pilg-note').value.trim();
+
+  if(editingPilgId){
+    if(editingPilgId === parentId){ showToast('不能將自己設為自己的群組上級'); return; }
+    const p = pilgrimages.find(x => x.id === editingPilgId);
+    if(p){ p.event = activePilgrimageEvent; p.name = name; p.phone = phone; p.idNumber = idNumber; p.birth = birth; p.parentId = parentId; p.bus = bus; p.plate = plate; p.room = room; p.note = note; }
+    showToast('已更新進香資料');
+  } else {
+    pilgrimages.push({ id: uid(), event: activePilgrimageEvent, name, phone, idNumber, birth, parentId, bus, plate, room, note, createdAt: Date.now() });
+    showToast('已新增進香人員');
+  }
+
+  // 同步法會登記
+  const existingDharmaRec = records.find(r => (r.event || dharmaEvents[0]) === activeDharmaEvent && r.name === name);
+  if(!existingDharmaRec){
+    records.push({
+      id: uid(), event: activeDharmaEvent, mode: 'single', name, phone, idNumber,
+      zodiac: '', solarBirth: '', rocBirth: birth, lunarBirth: '', address: '',
+      companyName: '', companyAddress: '', yinDebt: 0, repays: [], tag: '進香同步',
+      members: [], entries: {}, createdAt: Date.now()
+    });
+  } else {
+    if(!existingDharmaRec.phone && phone) existingDharmaRec.phone = phone;
+    if(!existingDharmaRec.idNumber && idNumber) existingDharmaRec.idNumber = idNumber;
+    if(!existingDharmaRec.rocBirth && birth) existingDharmaRec.rocBirth = birth;
+  }
+
+  await saveDataAll();
+  resetPilgForm();
+  renderPilgTable();
+  renderRecordTable();
+});
+
+document.getElementById('btn-pilg-clear').addEventListener('click', resetPilgForm);
+document.getElementById('btn-pilg-cancel-edit').addEventListener('click', resetPilgForm);
+
+function resetPilgForm(){
+  editingPilgId = null;
+  document.getElementById('pilg-name').value = '';
+  document.getElementById('pilg-phone').value = '';
+  document.getElementById('pilg-id-number').value = '';
+  document.getElementById('pilg-roc-birth').value = '';
+  document.getElementById('pilg-parent-select').value = '';
+  document.getElementById('pilg-plate').value = '';
+  document.getElementById('pilg-room').value = '';
+  document.getElementById('pilg-note').value = '';
+  document.getElementById('pilg-form-heading').textContent = '新增進香人員';
+  document.getElementById('btn-pilg-cancel-edit').style.display = 'none';
+  document.getElementById('btn-pilg-save').textContent = '儲存進香人員';
+  updatePilgBusSelect();
+  updatePilgParentSelect();
+}
+
+function startEditPilgrimage(id){
+  const p = pilgrimages.find(x => x.id === id);
+  if(!p) return;
+  editingPilgId = id;
+  document.getElementById('pilg-name').value = p.name;
+  document.getElementById('pilg-phone').value = p.phone || '';
+  document.getElementById('pilg-id-number').value = p.idNumber || '';
+  document.getElementById('pilg-roc-birth').value = p.birth || '';
+  updatePilgParentSelect(id);
+  document.getElementById('pilg-parent-select').value = p.parentId || '';
+  document.getElementById('pilg-bus').value = p.bus || '第1車';
+  document.getElementById('pilg-plate').value = p.plate || '';
+  document.getElementById('pilg-room').value = p.room || '';
+  document.getElementById('pilg-note').value = p.note || '';
+  document.getElementById('pilg-form-heading').textContent = '編輯進香人員：' + p.name;
+  document.getElementById('btn-pilg-cancel-edit').style.display = 'inline-block';
+  document.getElementById('btn-pilg-save').textContent = '更新進香人員';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function deletePilgrimage(id){
+  if(!confirm('確定要刪除嗎？若有下屬成員，將一併解除群組歸屬。')) return;
+  pilgrimages.forEach(p => { if(p.parentId === id) p.parentId = ''; });
+  pilgrimages = pilgrimages.filter(x => x.id !== id);
+  await saveDataAll();
+  renderPilgTable();
+  showToast('已刪除');
+}
+
+function renderPilgTable(){
+  const tbody = document.getElementById('pilg-table-body');
+  const empty = document.getElementById('pilg-table-empty');
+  const q = document.getElementById('pilg-search-input').value.trim();
+
+  updatePilgImportSelect();
+  updatePilgPrintScopeSelect();
+  updatePilgBusSelect();
+  updatePilgParentSelect(editingPilgId);
+
+  let matches = pilgrimages.filter(p => (p.event || pilgrimageEvents[0]) === activePilgrimageEvent);
+  if(q) matches = matches.filter(p => p.name.includes(q) || (p.phone && p.phone.includes(q)) || (p.bus && p.bus.includes(q)));
+
+  document.getElementById('pilg-total-count').textContent = matches.length;
+  tbody.innerHTML = '';
+  if(matches.length === 0){ empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  const roots = matches.filter(p => !p.parentId || !matches.some(x => x.id === p.parentId));
+  const sortedList = [];
+  roots.forEach(root => {
+    sortedList.push(root);
+    const children = matches.filter(p => p.parentId === root.id);
+    sortedList.push(...children);
+  });
+  matches.forEach(p => { if(!sortedList.includes(p)) sortedList.push(p); });
+
+  sortedList.forEach((p, idx) => {
+    const tr = document.createElement('tr');
+    const isSub = p.parentId && matches.some(x => x.id === p.parentId);
+    const parentObj = isSub ? matches.find(x => x.id === p.parentId) : null;
+    const nameIndent = isSub ? `<span style="color:var(--gold);margin-left:12px;">└ </span><b>${escapeHtml(p.name)}</b> <small style="color:#777;">(群組: ${escapeHtml(parentObj?.name||'')})</small>` : `<b>${escapeHtml(p.name)}</b>`;
+
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td>${nameIndent}</td>
+      <td>${escapeHtml(p.phone || '—')}</td>
+      <td>${escapeHtml(p.birth || '—')}</td>
+      <td>${escapeHtml(p.idNumber || '—')}</td>
+      <td><span class="stamp">${escapeHtml(p.bus || '未分車')}</span><br><small style="color:var(--gold);">${escapeHtml(p.plate || '')}</small></td>
+      <td><b>${escapeHtml(p.room || '—')}</b></td>
+      <td><small>${escapeHtml(p.note || '—')}</small></td>
+      <td style="text-align:center;">
+        <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:0.71875rem;" onclick="startEditPilgrimage('${p.id}')">編輯</button>
+        <button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:0.71875rem;" onclick="deletePilgrimage('${p.id}')">刪除</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('pilg-search-input').addEventListener('input', renderPilgTable);
+
+function updatePilgPrintScopeSelect(){
+  const sel = document.getElementById('pilg-print-scope-select');
+  if(!sel) return;
+  const allCars = getAllCarsForCurrentEvent();
+  let html = `<option value="__ALL__">全部進香人員</option>`;
+  allCars.forEach(car => html += `<option value="BUS::${escapeAttr(car)}">車次：${escapeHtml(car)}</option>`);
+  sel.innerHTML = html;
+}
+
+function generatePilgPrintContent(){
+  const isTwoCol = document.getElementById('ppo-two-col').checked;
+  const isCompact = document.getElementById('ppo-compact').checked;
+  document.body.classList.toggle('two-column-print', isTwoCol);
+  document.body.classList.toggle('compact-print', isCompact);
+
+  const showPhone = document.getElementById('ppo-phone').checked;
+  const showBirth = document.getElementById('ppo-birth').checked;
+  const showId = document.getElementById('ppo-id').checked;
+  const showBus = document.getElementById('ppo-bus').checked;
+  const showRoom = document.getElementById('ppo-room').checked;
+  const showNote = document.getElementById('ppo-note').checked;
+
+  const scopeVal = document.getElementById('pilg-print-scope-select').value;
+  let matches = pilgrimages.filter(p => (p.event || pilgrimageEvents[0]) === activePilgrimageEvent);
+  let subTitle = `【${activePilgrimageEvent}】進香人員名冊`;
+
+  if(scopeVal.startsWith('BUS::')){
+    const targetBus = scopeVal.replace('BUS::', '');
+    matches = matches.filter(p => p.bus === targetBus);
+    subTitle = `【${activePilgrimageEvent}】${targetBus} 人員名冊`;
+  }
+
+  if(matches.length === 0){ showToast('無資料可列印'); return null; }
+
+  const roots = matches.filter(p => !p.parentId || !matches.some(x => x.id === p.parentId));
+  const sortedList = [];
+  roots.forEach(root => {
+    sortedList.push(root);
+    const children = matches.filter(p => p.parentId === root.id);
+    sortedList.push(...children);
+  });
+  matches.forEach(p => { if(!sortedList.includes(p)) sortedList.push(p); });
+
+  let html = `
+    <div class="print-title-wrap">
+      <p class="print-title">順天太子會 - ${escapeHtml(subTitle)}</p>
+      <p class="print-sub">列印日期：${new Date().toLocaleString('zh-TW')} (共 ${matches.length} 人)</p>
+    </div>
+    <div class="print-content-container"><div class="print-section">
+      <table>
+        <thead><tr>
+          <th>序號</th><th>姓名</th>
+          ${showPhone?'<th>聯絡電話</th>':''}
+          ${showBirth?'<th>民國生日</th>':''}
+          ${showId?'<th>身分證字號</th>':''}
+          ${showBus?'<th>車次 / 車牌</th>':''}
+          ${showRoom?'<th>房間號</th>':''}
+          ${showNote?'<th>備註</th>':''}
+        </tr></thead>
+        <tbody>
+  `;
+  sortedList.forEach((p, idx) => {
+    const cp = carPlatesMap[activePilgrimageEvent]?.[p.bus] || p.plate || '';
+    const isSub = p.parentId && matches.some(x => x.id === p.parentId);
+    const parentObj = isSub ? matches.find(x => x.id === p.parentId) : null;
+    const nameTxt = isSub ? `&nbsp;&nbsp;└ <b>${escapeHtml(p.name)}</b> <small>(${escapeHtml(parentObj?.name||'')})</small>` : `<b>${escapeHtml(p.name)}</b>`;
+
+    html += `<tr>
+      <td>${idx + 1}</td>
+      <td>${nameTxt}</td>
+      ${showPhone?`<td>${escapeHtml(p.phone||'—')}</td>`:''}
+      ${showBirth?`<td>${escapeHtml(p.birth||'—')}</td>`:''}
+      ${showId?`<td>${escapeHtml(p.idNumber||'—')}</td>`:''}
+      ${showBus?`<td>${escapeHtml(p.bus||'未分車')} ${cp?`(${escapeHtml(cp)})`:''}</td>`:''}
+      ${showRoom?`<td><b>${escapeHtml(p.room||'—')}</b></td>`:''}
+      ${showNote?`<td><small>${escapeHtml(p.note||'—')}</small></td>`:''}
+    </tr>`;
+  });
+  html += `</tbody></table></div></div><div class="print-grand-total">進香總人數：<b>${matches.length}</b> 人</div>`;
+  return html;
+}
+
+document.getElementById('btn-pilg-gen-preview').addEventListener('click', ()=>{
+  const html = generatePilgPrintContent();
+  if(!html) return;
+  document.getElementById('pilg-print-preview-area').innerHTML = `<div class="detail-card">${html}</div>`;
+  document.getElementById('print-area').innerHTML = html;
+  showToast('已產生預覽');
+});
+
+document.getElementById('btn-pilg-print-action').addEventListener('click', ()=>{
+  const html = generatePilgPrintContent();
+  if(!html) return;
+  document.getElementById('print-area').innerHTML = html;
+  window.print();
+});
+
+// ==========================================
+// 💰 3. 獨立捐款管理邏輯
+// ==========================================
+function updateDonationImportSelect(){
+  const sel = document.getElementById('don-import-select');
+  if(!sel) return;
+  const activeRecords = records.filter(r => (r.event || dharmaEvents[0]) === activeDharmaEvent);
+  let html = `<option value="">-- 請選擇既有名冊人員帶入 --</option>`;
+  activeRecords.forEach(r => {
+    if(r.mode === 'single') html += `<option value="single::${r.id}">${escapeHtml(r.name)} (個人)</option>`;
+    else if(r.members) r.members.forEach(m => html += `<option value="member::${r.id}::${escapeAttr(m.name)}">${escapeHtml(m.name)} (來自戶頭：${escapeHtml(r.name)})</option>`);
+  });
+  sel.innerHTML = html;
+}
+
+document.getElementById('don-import-select').addEventListener('change', (e)=>{
+  const val = e.target.value;
+  if(!val) return;
+  const parts = val.split('::');
+  if(parts[0] === 'single'){
+    const rec = records.find(r => r.id === parts[1]);
+    if(rec){
+      document.getElementById('don-name').value = rec.name;
+      document.getElementById('don-phone').value = rec.phone || '';
+      document.getElementById('don-address').value = rec.address || '';
+      showToast(`已帶入「${rec.name}」捐款人資料`);
+    }
+  } else if(parts[0] === 'member'){
+    const rec = records.find(r => r.id === parts[1]);
+    if(rec && rec.members){
+      const m = rec.members.find(x => x.name === parts[2]);
+      if(m){
+        document.getElementById('don-name').value = m.name;
+        document.getElementById('don-phone').value = rec.phone || '';
+        document.getElementById('don-address').value = rec.address || '';
+        showToast(`已帶入成員「${m.name}」捐款人資料`);
+      }
+    }
+  }
+  e.target.value = '';
+});
+
+function updateDonationPrintScopeSelect(){
+  const sel = document.getElementById('don-print-scope-select');
+  if(!sel) return;
+  let html = `<option value="__ALL__">全部捐款紀錄（${activeDonationEvent}）</option>`;
+  donations.filter(d => (d.event || donationEvents[0]) === activeDonationEvent).forEach(d => {
+    html += `<option value="ID::${escapeAttr(d.id)}">${escapeHtml(d.date||'—')} ｜ ${escapeHtml(d.name)} (${formatMoney(d.amount)})</option>`;
+  });
+  sel.innerHTML = html;
+}
+
+document.getElementById('btn-don-save').addEventListener('click', async ()=>{
+  const name = document.getElementById('don-name').value.trim();
+  if(!name){ showToast('請輸入捐款人'); return; }
+  const amount = parseFloat(document.getElementById('don-amount').value);
+  if(isNaN(amount) || amount <= 0){ showToast('請輸入有效金額'); return; }
+
+  const date = document.getElementById('don-date').value || new Date().toISOString().slice(0, 10);
+  const phone = document.getElementById('don-phone').value.trim();
+  let item = document.getElementById('don-item-input').value.trim() || '隨喜功德金';
+  const address = document.getElementById('don-address').value.trim();
+  const payMethod = document.getElementById('don-pay-method').value;
+  const note = document.getElementById('don-note').value.trim();
+
+  if(!customDonationItems.includes(item)){ customDonationItems.push(item); await saveDataAll(); updateDonationItemsDatalist(); }
+
+  if(editingDonId){
+    const d = donations.find(x => x.id === editingDonId);
+    if(d) Object.assign(d, { event: activeDonationEvent, name, phone, date, item, amount, address, payMethod, note });
+    showToast('已更新捐款紀錄');
+  } else {
+    donations.push({ id: uid(), event: activeDonationEvent, name, phone, date, item, amount, address, payMethod, note, createdAt: Date.now() });
+    showToast('已新增捐款紀錄');
+  }
+
+  await saveDataAll();
+  resetDonationForm();
+  renderDonationTable();
+});
+
+document.getElementById('btn-don-clear').addEventListener('click', resetDonationForm);
+document.getElementById('btn-don-cancel-edit').addEventListener('click', resetDonationForm);
+
+function resetDonationForm(){
+  editingDonId = null;
+  document.getElementById('don-name').value = '';
+  document.getElementById('don-phone').value = '';
+  document.getElementById('don-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('don-item-input').value = '';
+  document.getElementById('don-amount').value = '';
+  document.getElementById('don-address').value = '';
+  document.getElementById('don-note').value = '';
+  document.getElementById('don-form-heading').textContent = '新增捐款紀錄';
+  document.getElementById('btn-don-cancel-edit').style.display = 'none';
+  document.getElementById('btn-don-save').textContent = '儲存捐款';
+  updateDonationImportSelect();
+}
+
+function startEditDonation(id){
+  const d = donations.find(x => x.id === id);
+  if(!d) return;
+  editingDonId = id;
+  document.getElementById('don-name').value = d.name;
+  document.getElementById('don-phone').value = d.phone || '';
+  document.getElementById('don-date').value = d.date || '';
+  document.getElementById('don-item-input').value = d.item || '';
+  document.getElementById('don-amount').value = d.amount;
+  document.getElementById('don-address').value = d.address || '';
+  document.getElementById('don-pay-method').value = d.payMethod || '現金';
+  document.getElementById('don-note').value = d.note || '';
+  document.getElementById('don-form-heading').textContent = '編輯捐款：' + d.name;
+  document.getElementById('btn-don-cancel-edit').style.display = 'inline-block';
+  document.getElementById('btn-don-save').textContent = '更新捐款';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function deleteDonation(id){
+  if(!confirm('確定要刪除嗎？')) return;
+  donations = donations.filter(x => x.id !== id);
+  await saveDataAll();
+  renderDonationTable();
+  showToast('已刪除');
+}
+
+function renderDonationTable(){
+  const tbody = document.getElementById('don-table-body');
+  const empty = document.getElementById('don-table-empty');
+  const q = document.getElementById('don-search-input').value.trim();
+  updateDonationPrintScopeSelect();
+  updateDonationImportSelect();
+
+  let matches = donations.filter(d => (d.event || donationEvents[0]) === activeDonationEvent);
+  if(q) matches = matches.filter(d => d.name.includes(q) || (d.phone && d.phone.includes(q)));
+
+  document.getElementById('don-total-count').textContent = matches.length;
+  const totalMoney = matches.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+  document.getElementById('don-total-amount').textContent = formatMoney(totalMoney);
+
+  tbody.innerHTML = '';
+  if(matches.length === 0){ empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  matches.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(d => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(d.date || '—')}</td>
+      <td><b>${escapeHtml(d.name)}</b></td>
+      <td>${escapeHtml(d.phone || '—')}</td>
+      <td><span class="stamp">${escapeHtml(d.item || '隨喜功德金')}</span></td>
+      <td style="text-align:right;font-weight:bold;color:var(--seal-dark);">${formatMoney(d.amount)}</td>
+      <td><small>${escapeHtml(d.address||'—')} ${escapeHtml(d.note||'')}</small></td>
+      <td style="text-align:center;">
+        <button class="btn btn-primary btn-sm" style="padding:2px 6px;font-size:0.71875rem;" onclick="generateCertificate('${d.id}')">📜 感謝狀</button>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:0.71875rem;" onclick="startEditDonation('${d.id}')">編輯</button>
+        <button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:0.71875rem;" onclick="deleteDonation('${d.id}')">刪除</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('don-search-input').addEventListener('input', renderDonationTable);
+
+function updateDonationItemsDatalist(){
+  const dl = document.getElementById('don-item-datalist');
+  if(dl) dl.innerHTML = customDonationItems.map(item => `<option value="${escapeAttr(item)}">`).join('');
+}
+
+document.getElementById('btn-manage-don-items').addEventListener('click', async ()=>{
+  const item = prompt('請輸入自訂捐款項目名稱（如已有則可直接刪除）：')?.trim();
+  if(!item) return;
+  if(customDonationItems.includes(item)){
+    if(confirm(`刪除「${item}」？`)){ customDonationItems = customDonationItems.filter(x => x !== item); await saveDataAll(); updateDonationItemsDatalist(); }
+  } else {
+    customDonationItems.push(item); await saveDataAll(); updateDonationItemsDatalist();
+    document.getElementById('don-item-input').value = item;
+  }
+});
+
+function generateCertificate(donId){
+  currentViewingDonId = donId;
+  const d = donations.find(x => x.id === donId);
+  if(!d) return;
+
+  const chineseAmount = numberToChineseAmount(d.amount);
+  const donDate = d.date ? new Date(d.date) : new Date();
+  const rocYear = donDate.getFullYear() - 1911;
+  const month = donDate.getMonth() + 1;
+  const day = donDate.getDate();
+
+  const officialSealHtml = `
+    <div class="temple-official-seal">
+      <div class="temple-seal-mid">
+        <div class="temple-seal-in">
+          <div class="temple-seal-top">順天</div>
+          <div class="temple-seal-bot">太子會</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const certHtml = `
+    <div class="cert-container">
+      <div class="cert-header">
+        <p class="cert-title">順天太子會</p>
+        <p class="cert-sub">${escapeHtml(d.event || activeDonationEvent)} 感謝狀</p>
+      </div>
+      <div class="cert-body">
+        茲承蒙 善信大德 <b style="font-size:22px;color:var(--seal-dark);text-decoration:underline;"> ${escapeHtml(d.name)} </b> 虔誠向道、鼎力相助，熱心捐助本會【<b>${escapeHtml(d.item||'隨喜功德')}</b>】。<br><br>
+        捐助金額計新台幣：<span class="cert-amount"> ${chineseAmount} </span>（NT$ ${Number(d.amount).toLocaleString()} 元整）。
+        ${d.note ? `<br><br>祈願事由：<b>${escapeHtml(d.note)}</b>` : ''}
+        <br><br>本會全體同仁銘感同深，特頒此狀以昭謝忱。<br>並祈 中壇元帥 暨 列位聖尊 庇佑 闔家平安、萬事順遂、福壽康寧。
+      </div>
+      <div class="cert-footer">
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:16px;">
+          <p style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--seal-dark);margin:0;letter-spacing:1px;">順天太子會 管理委員會 敬啟</p>
+          ${officialSealHtml}
+        </div>
+        <div style="text-align:center;width:100%;margin-top:8px;"><p class="cert-date">中華民國 ${rocYear} 年 ${month} 月 ${day} 日</p></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('cert-render-area').innerHTML = certHtml;
+  document.getElementById('cert-preview-card').style.display = 'block';
+  document.getElementById('cert-preview-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function numberToChineseAmount(num){
+  const digits = ['零','壹','貳','參','肆','伍','陸','柒','捌','玖'];
+  const units = ['','拾','佰','仟'];
+  const bigUnits = ['','萬','億','兆'];
+  num = Math.floor(Math.abs(Number(num) || 0));
+  if(num === 0) return '零元整';
+  let str = '', strNum = num.toString(), len = strNum.length, zeroCount = 0;
+  for(let i = 0; i < len; i++){
+    let n = parseInt(strNum[i]), pos = len - i - 1, unitPos = pos % 4, bigUnitPos = Math.floor(pos / 4);
+    if(n === 0){ zeroCount++; } else {
+      if(zeroCount > 0){ str += '零'; zeroCount = 0; }
+      str += digits[n] + units[unitPos];
+    }
+    if(unitPos === 0 && zeroCount < 4){ str += bigUnits[bigUnitPos]; zeroCount = 0; }
+  }
+  return str + '元整';
+}
+
+document.getElementById('btn-print-single-cert').addEventListener('click', ()=>{
+  const content = document.getElementById('cert-render-area').innerHTML;
+  document.body.classList.remove('compact-print', 'two-column-print');
+  document.body.classList.add('cert-print-mode');
+  document.getElementById('print-area').innerHTML = content;
+  window.print();
+  document.body.classList.remove('cert-print-mode');
+});
+
+function generateDonationPrintContent(){
+  const isTwoCol = document.getElementById('dpo-two-col').checked;
+  const isCompact = document.getElementById('dpo-compact').checked;
+  document.body.classList.toggle('two-column-print', isTwoCol);
+  document.body.classList.toggle('compact-print', isCompact);
+
+  const scopeVal = document.getElementById('don-print-scope-select').value;
+  let matches = donations.filter(d => (d.event || donationEvents[0]) === activeDonationEvent);
+  let subTitle = `【${activeDonationEvent}】捐款明細`;
+
+  if(scopeVal.startsWith('ID::')){
+    const targetId = scopeVal.replace('ID::', '');
+    matches = matches.filter(d => d.id === targetId);
+    subTitle = matches[0] ? `【${matches[0].name}】單筆捐款明細` : '單筆捐款明細';
+  }
+
+  if(matches.length === 0){ showToast('無資料'); return null; }
+  const totalMoney = matches.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+
+  let html = `
+    <div class="print-title-wrap">
+      <p class="print-title">順天太子會 - ${escapeHtml(subTitle)}</p>
+      <p class="print-sub">列印日期：${new Date().toLocaleString('zh-TW')} (共 ${matches.length} 筆)</p>
+    </div>
+    <div class="print-content-container"><div class="print-section">
+      <table>
+        <thead><tr><th>序號</th><th>捐款日期</th><th>捐款人 / 寶號</th><th>電話</th><th>項目</th><th>付款方式</th><th style="text-align:right;">金額</th><th>地址 / 備註</th></tr></thead>
+        <tbody>
+  `;
+  matches.forEach((d, idx) => {
+    html += `<tr><td>${idx + 1}</td><td>${escapeHtml(d.date||'—')}</td><td><b>${escapeHtml(d.name)}</b></td><td>${escapeHtml(d.phone||'—')}</td><td>${escapeHtml(d.item||'隨喜')}</td><td>${escapeHtml(d.payMethod||'現金')}</td><td style="text-align:right;font-weight:bold;">${formatMoney(d.amount)}</td><td><small>${escapeHtml(d.address||'')} ${escapeHtml(d.note||'')}</small></td></tr>`;
+  });
+  html += `</tbody><tfoot><tr><td colspan="6" style="text-align:right;font-weight:bold;">總計：</td><td style="text-align:right;font-weight:bold;color:var(--seal-dark);">${formatMoney(totalMoney)}</td><td></td></tr></tfoot></table></div></div><div class="print-grand-total">累積總筆數：<b>${matches.length}</b> 筆 ｜ 總計：<b>${formatMoney(totalMoney)}</b></div>`;
+  return html;
+}
+
+document.getElementById('btn-don-gen-preview').addEventListener('click', ()=>{
+  const html = generateDonationPrintContent();
+  if(!html) return;
+  document.getElementById('don-print-preview-area').innerHTML = `<div class="detail-card">${html}</div>`;
+  document.getElementById('print-area').innerHTML = html;
+  showToast('已產生預覽');
+});
+
+document.getElementById('btn-don-print-action').addEventListener('click', ()=>{
+  const html = generateDonationPrintContent();
+  if(!html) return;
+  document.getElementById('print-area').innerHTML = html;
+  window.print();
+});
+
+// ==========================================
+// 4. 查詢分頁
+// ==========================================
+function renderSearchCatCheckboxes(){
+  const container = document.getElementById('search-cat-checkboxes');
+  if(!container) return;
+  container.innerHTML = categories.map(cat => `
+    <label style="font-size:0.8125rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+      <input type="checkbox" name="search-cat-chk" value="${escapeAttr(cat)}" checked style="accent-color:var(--seal);"> ${escapeHtml(cat)}
+    </label>
+  `).join('');
+}
+
+function toggleAllSearchCats(status){
+  document.querySelectorAll('input[name="search-cat-chk"]').forEach(chk => chk.checked = status);
+}
+
+function renderSearchNameSelect(){
+  const sel = document.getElementById('s-name-target');
+  if(!sel) return;
+  const activeRecords = records.filter(r => (r.event || dharmaEvents[0]) === activeDharmaEvent);
+  let html = `<option value="__ALL__">全部名冊 (所有個人與家庭)</option>`;
+  activeRecords.slice().sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant')).forEach(r => {
+    if(r.mode === 'family'){
+      html += `<option value="FAMILY::${r.id}">[整個家庭戶頭] ${escapeHtml(r.name)}</option>`;
+      if(r.members && r.members.length > 0){
+        r.members.forEach(m => {
+          html += `<option value="MEMBER::${r.id}::${escapeAttr(m.name)}">&nbsp;&nbsp;└ [家庭單獨成員] ${escapeHtml(m.name)} (${m.relation||'成員'}) [戶主: ${escapeHtml(r.name)}]</option>`;
+        });
+      }
+    } else {
+      html += `<option value="SINGLE::${r.id}">[個人] ${escapeHtml(r.name)}</option>`;
+    }
+  });
+  sel.innerHTML = html;
+}
+
+document.querySelectorAll('.search-toggle button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.search-toggle button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentSearchMode = btn.dataset.smode;
+
+    document.getElementById('search-cat-panel').style.display = 'none';
+    document.getElementById('search-name-panel').style.display = 'none';
+    document.getElementById('search-yin-panel').style.display = 'none';
+
+    if(currentSearchMode === 'cat'){
+      document.getElementById('search-cat-panel').style.display = 'block';
+      renderSearchCatCheckboxes();
+    } else if(currentSearchMode === 'name'){
+      document.getElementById('search-name-panel').style.display = 'block';
+      renderSearchNameSelect();
+    } else if(currentSearchMode === 'yin-all' || currentSearchMode === 'yin-unpaid'){
+      document.getElementById('search-yin-panel').style.display = 'block';
+      document.getElementById('search-yin-title').textContent = currentSearchMode === 'yin-unpaid' ? '未償還陰債名單查詢' : '全部陰債名單查詢';
+    }
+    document.getElementById('search-result-area').innerHTML = '';
+  });
+});
+
+function renderSearchTab(){
+  renderSearchCatCheckboxes();
+  renderSearchNameSelect();
+  document.getElementById('search-result-area').innerHTML = '';
+}
+
+function wrapSearchResultWithEdit(htmlContent, recordId){
+  if(!recordId) return htmlContent;
+  return `
+    <div style="position:relative; margin-bottom:14px;">
+      <div style="position:absolute; top:12px; right:12px; z-index:10;">
+        <button class="btn btn-primary btn-sm" onclick="startEdit('${recordId}')">✏️ 編輯此筆資料</button>
+      </div>
+      ${htmlContent}
+    </div>
+  `;
+}
+
+document.getElementById('btn-do-search-cat').addEventListener('click', ()=>{
+  const html = generateDharmaPrintContent('cat');
+  if(!html) return;
+  document.getElementById('search-result-area').innerHTML = `<div class="detail-card">${html}</div>`;
+  showToast('已顯示查詢結果');
+});
+
+document.getElementById('btn-do-search-name').addEventListener('click', ()=>{
+  const targetVal = document.getElementById('s-name-target').value;
+  const html = generateDharmaPrintContent('name', targetVal);
+  if(!html) return;
+
+  let recId = null;
+  if(targetVal.startsWith('FAMILY::') || targetVal.startsWith('SINGLE::') || targetVal.startsWith('MEMBER::')){
+    recId = targetVal.split('::')[1];
+  }
+
+  const finalCardHtml = recId ? wrapSearchResultWithEdit(html, recId) : `<div class="detail-card">${html}</div>`;
+  document.getElementById('search-result-area').innerHTML = finalCardHtml;
+  showToast('已顯示查詢結果');
+});
+
+document.getElementById('btn-do-search-yin').addEventListener('click', ()=>{
+  const html = generateDharmaPrintContent(currentSearchMode);
+  if(!html) return;
+  document.getElementById('search-result-area').innerHTML = `<div class="detail-card">${html}</div>`;
+  showToast('已顯示查詢結果');
+});
+
+
+// ==========================================
+// 5. 列印清單分頁
+// ==========================================
+function renderPrintCatCheckboxes(){
+  const container = document.getElementById('print-cat-checkboxes');
+  if(!container) return;
+  container.innerHTML = categories.map(cat => `
+    <label style="font-size:0.8125rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+      <input type="checkbox" name="print-cat-chk" value="${escapeAttr(cat)}" checked style="accent-color:var(--seal);"> ${escapeHtml(cat)}
+    </label>
+  `).join('');
+}
+
+function toggleAllPrintCats(status){
+  document.querySelectorAll('input[name="print-cat-chk"]').forEach(chk => chk.checked = status);
+}
+
+function renderPrintNameSelect(){
+  const sel = document.getElementById('p-name-target');
+  if(!sel) return;
+  const activeRecords = records.filter(r => (r.event || dharmaEvents[0]) === activeDharmaEvent);
+  let html = `<option value="__ALL__">全部名冊 (所有個人與家庭)</option>`;
+  activeRecords.slice().sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant')).forEach(r => {
+    if(r.mode === 'family'){
+      html += `<option value="FAMILY::${r.id}">[整個家庭戶頭] ${escapeHtml(r.name)}</option>`;
+      if(r.members && r.members.length > 0){
+        r.members.forEach(m => {
+          html += `<option value="MEMBER::${r.id}::${escapeAttr(m.name)}">&nbsp;&nbsp;└ [家庭單獨成員] ${escapeHtml(m.name)} (${m.relation||'成員'}) [戶主: ${escapeHtml(r.name)}]</option>`;
+        });
+      }
+    } else {
+      html += `<option value="SINGLE::${r.id}">[個人] ${escapeHtml(r.name)}</option>`;
+    }
+  });
+  sel.innerHTML = html;
+}
+
+document.querySelectorAll('.print-toggle button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.print-toggle button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPrintMode = btn.dataset.pmode;
+
+    const selectorArea = document.getElementById('print-selector-area');
+    const nameSelectorArea = document.getElementById('print-name-selector-area');
+    const yinSelectorArea = document.getElementById('print-yin-selector-area');
+
+    selectorArea.style.display = 'none';
+    nameSelectorArea.style.display = 'none';
+    yinSelectorArea.style.display = 'none';
+
+    if(currentPrintMode === 'cat'){
+      selectorArea.style.display = 'block';
+      renderPrintCatCheckboxes();
+    } else if(currentPrintMode === 'name'){
+      nameSelectorArea.style.display = 'block';
+      renderPrintNameSelect();
+    } else if(currentPrintMode === 'yin-all' || currentPrintMode === 'yin-unpaid'){
+      yinSelectorArea.style.display = 'block';
+      document.getElementById('yin-scope-label').textContent = currentPrintMode === 'yin-unpaid' ? '目前模式：全部未償還陰債名單' : '全部陰債名單';
+    }
+    document.getElementById('p-preview').innerHTML = '';
+  });
+});
+
+function renderPrintTab(){
+  const activeRecords = records.filter(r => (r.event || dharmaEvents[0]) === activeDharmaEvent);
+  const statRow = document.getElementById('stat-row');
+  const totalAll = activeRecords.reduce((s,r)=> s + recordTotal(r.entries), 0);
+  const totalCountAll = activeRecords.reduce((s,r)=> s + recordTotalCount(r.entries), 0);
+  let totalPersons = 0;
+  activeRecords.forEach(r => { totalPersons += (r.mode === 'family' && r.members ? r.members.length : 1); });
+
+  statRow.innerHTML = `<div class="stat"><b>${activeRecords.length} 戶/筆</b>總登記</div>` +
+    `<div class="stat"><b>${totalPersons} 人</b>總人次</div>` +
+    `<div class="stat"><b>${totalCountAll}</b>總數量</div>` +
+    `<div class="stat"><b>${formatMoney(totalAll)}</b>總金額</div>`;
+
+  renderPrintCatCheckboxes();
+  renderPrintNameSelect();
+  document.getElementById('p-preview').innerHTML = '';
+}
+
+// 核心列印內容產生器
+function generateDharmaPrintContent(modeOverride, targetOverride){
+  const activeRecords = records.filter(r => (r.event || dharmaEvents[0]) === activeDharmaEvent);
+  const pMode = modeOverride || currentPrintMode;
+
+  const isTwoCol = document.getElementById('po-two-col').checked;
+  const isCompact = document.getElementById('po-compact-a4').checked;
+  document.body.classList.toggle('two-column-print', isTwoCol);
+  document.body.classList.toggle('compact-print', isCompact);
+
+  const showStat = document.getElementById('po-stat').checked;
+  const showCountStat = document.getElementById('po-count-stat')?.checked ?? true;
+  const showPersonStat = document.getElementById('po-person-stat')?.checked ?? true;
+  const showFamilyMembers = document.getElementById('po-family-members')?.checked ?? true;
+  const showRelationGroup = document.getElementById('po-relation-group')?.checked ?? true;
+  const showPhone = document.getElementById('po-phone')?.checked ?? true;
+  const showZodiac = document.getElementById('po-zodiac')?.checked ?? true;
+  
+  const showBirthSolar = document.getElementById('po-birth-solar')?.checked ?? false;
+  const showBirthRoc = document.getElementById('po-birth-roc')?.checked ?? true;
+  const showBirthLunar = document.getElementById('po-birth-lunar')?.checked ?? false;
+
+  const showId = document.getElementById('po-id')?.checked ?? true;
+  const showAddress = document.getElementById('po-address')?.checked ?? true;
+  const showCompany = document.getElementById('po-company')?.checked ?? true;
+  const showYin = document.getElementById('po-yin')?.checked ?? true;
+  const showCount = document.getElementById('po-count')?.checked ?? true;
+  const showNote = document.getElementById('po-note')?.checked ?? true;
+  const showPrice = document.getElementById('po-price')?.checked ?? true;
+
+  function formatBirthStr(obj){
+    let parts = [];
+    if(showBirthSolar && obj.solarBirth) parts.push(`國:${obj.solarBirth}`);
+    if(showBirthRoc && obj.rocBirth) parts.push(`民:${obj.rocBirth}`);
+    if(showBirthLunar && obj.lunarBirth) parts.push(`農:${obj.lunarBirth}`);
+    return parts.join(' / ') || '—';
+  }
+
+  let html = '';
+
+  if(pMode === 'yin-all' || pMode === 'yin-unpaid'){
+    const isUnpaidOnly = (pMode === 'yin-unpaid');
+    let yinList = [];
+    activeRecords.forEach(r => {
+      if(r.mode === 'family' && r.members) r.members.forEach(m => { if(Number(m.yinDebt)>0) yinList.push({ name: m.name, groupName: `戶頭：${r.name}`, ...m }); });
+      else if(Number(r.yinDebt)>0) yinList.push({ name: r.name, groupName: '個人', ...r });
+    });
+    if(isUnpaidOnly) yinList = yinList.filter(item => getYinSummary(item).remain > 0);
+    yinList.sort((a,b) => a.name.localeCompare(b.name,'zh-Hant'));
+
+    html = `<div class="print-title-wrap"><p class="print-title">順天太子會【${activeDharmaEvent}】 - ${isUnpaidOnly ? '未償還陰債名單' : '全部陰債名單'}</p></div>`;
+    html += `<div class="print-content-container"><div class="print-section"><table><thead><tr><th>序號</th><th>姓名</th>${showRelationGroup?'<th>類別</th>':''}${showPhone?'<th>電話</th>':''}${showZodiac?'<th>生肖</th>':''}<th>生日</th>${showAddress?'<th>地址</th>':''}<th style="text-align:right;">欠債總額</th><th style="text-align:right;">已還</th><th style="text-align:right;">未還</th></tr></thead><tbody>`;
+    yinList.forEach((r, i) => {
+      const sum = getYinSummary(r);
+      const bTxt = formatBirthStr(r);
+      html += `<tr><td>${i+1}</td><td><b>${escapeHtml(r.name)}</b></td>${showRelationGroup?`<td><small>${escapeHtml(r.groupName)}</small></td>`:''}${showPhone?`<td>${escapeHtml(r.phone||'—')}</td>`:''}${showZodiac?`<td>${escapeHtml(r.zodiac||'—')}</td>`:''}<td>${escapeHtml(bTxt)}</td>${showAddress?`<td>${escapeHtml(r.address||'—')}</td>`:''}<td style="text-align:right;">${sum.debt}</td><td style="text-align:right;">${sum.repaid}</td><td style="text-align:right;font-weight:bold;color:var(--seal-dark);">${sum.remain <= 0 ? '已還清' : sum.remain}</td></tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+
+  } else if(pMode === 'cat'){
+    const selectedCats = Array.from(document.querySelectorAll('input[name="print-cat-chk"]:checked')).map(chk => chk.value);
+    if(selectedCats.length === 0){ showToast('請至少勾選一個項目'); return null; }
+
+    html = `<div class="print-title-wrap"><p class="print-title">順天太子會【${activeDharmaEvent}】登記清單</p><p class="print-sub">列印日期：${new Date().toLocaleString('zh-TW')}</p></div><div class="print-content-container">`;
+
+    let overallTotal = 0;
+    let overallCount = 0;
+
+    selectedCats.forEach(cat => {
+      const catMatches = activeRecords.filter(r => Object.prototype.hasOwnProperty.call(r.entries||{}, cat));
+      let catTotal = 0;
+      let expandedRows = [];
+
+      catMatches.forEach(rec => {
+        const e = rec.entries[cat] || {};
+        const isFam = rec.mode === 'family';
+        const compTxt = (rec.companyName || rec.companyAddress) ? `${escapeHtml(rec.companyName||'')} ${escapeHtml(rec.companyAddress?`(${rec.companyAddress})`:'' )}` : '—';
+        const recPhone = rec.phone || '—';
+
+        if(isFam){
+          let targetMembers = (e.members && e.members.length > 0) ? rec.members.filter(m => e.members.includes(m.name)) : rec.members;
+          if(!targetMembers || targetMembers.length === 0) targetMembers = [{ name: rec.name, relation: '全戶代表', zodiac: '', solarBirth: '', rocBirth: '', lunarBirth: '', yinDebt: 0, repays: [] }];
+
+          targetMembers.forEach(m => {
+            const sum = getYinSummary(m);
+            const bTxt = formatBirthStr(m);
+            const yTxt = sum.debt > 0 ? formatYinStatus(m) : '—';
+            const unitP = (e.memberPrices && e.memberPrices[m.name] != null) ? e.memberPrices[m.name] : e.price;
+            const memCnt = (e.memberCounts && e.memberCounts[m.name] != null) ? e.memberCounts[m.name] : e.count;
+            const rowTot = unitP * memCnt;
+            catTotal += rowTot;
+            overallCount += memCnt;
+
+            expandedRows.push({
+              name: m.name,
+              relationGroupTxt: `${escapeHtml(m.relation?`[${m.relation}] `:'' )}戶頭：${escapeHtml(rec.name)}`,
+              phone: recPhone,
+              zodiac: m.zodiac || '—',
+              birthTxt: bTxt,
+              idNumber: m.idNumber || '—',
+              address: rec.address || '—',
+              compTxt: compTxt,
+              yinTxt: yTxt,
+              count: memCnt,
+              priceTxt: formatMoney(rowTot),
+              note: e.note || ''
+            });
+          });
+        } else {
+          const sum = getYinSummary(rec);
+          const bTxt = formatBirthStr(rec);
+          const yTxt = sum.debt > 0 ? formatYinStatus(rec) : '—';
+          const rowTot = e.price * e.count;
+          catTotal += rowTot;
+          overallCount += (Number(e.count)||1);
+
+          expandedRows.push({
+            name: rec.name,
+            relationGroupTxt: '個人',
+            phone: recPhone,
+            zodiac: rec.zodiac || '—',
+            birthTxt: bTxt,
+            idNumber: rec.idNumber || '—',
+            address: rec.address || '—',
+            compTxt: compTxt,
+            yinTxt: yTxt,
+            count: e.count,
+            priceTxt: formatMoney(rowTot),
+            note: e.note || ''
+          });
+        }
+      });
+
+      overallTotal += catTotal;
+      const catItemsCount = expandedRows.reduce((s, r) => s + (Number(r.count)||1), 0);
+
+      const statPieces = [];
+      if(showPersonStat) statPieces.push(`共 ${expandedRows.length} 人`);
+      if(showCountStat) statPieces.push(`共 ${catItemsCount} 份`);
+
+      html += `<div class="print-section"><h3>${escapeHtml(cat)} ${statPieces.length ? `（${statPieces.join(' ｜ ')}）` : ''}</h3>`;
+      if(expandedRows.length > 0){
+        html += `<table><thead><tr>
+          <th style="width:35px;">序號</th><th>姓名</th>
+          ${showRelationGroup?'<th>稱謂 / 戶頭</th>':''}
+          ${showPhone?'<th>電話</th>':''}
+          ${showZodiac?'<th>生肖</th>':''}
+          <th>生日</th>
+          ${showId?'<th>身分證</th>':''}
+          ${showAddress?'<th>地址</th>':''}
+          ${showCompany?'<th>公司</th>':''}
+          ${showYin?'<th>陰債</th>':''}
+          ${showCount?'<th style="width:45px;">數量</th>':''}
+          ${showNote?'<th>備註</th>':''}
+          ${showPrice?'<th style="text-align:right;">金額</th>':''}
+        </tr></thead><tbody>`;
+
+        expandedRows.forEach((r, i) => {
+          html += `<tr>
+            <td>${i+1}</td><td><b>${escapeHtml(r.name)}</b></td>
+            ${showRelationGroup?`<td><small>${escapeHtml(r.relationGroupTxt)}</small></td>`:''}
+            ${showPhone?`<td>${escapeHtml(r.phone)}</td>`:''}
+            ${showZodiac?`<td>${escapeHtml(r.zodiac)}</td>`:''}
+            <td>${escapeHtml(r.birthTxt)}</td>
+            ${showId?`<td>${escapeHtml(r.idNumber)}</td>`:''}
+            ${showAddress?`<td>${escapeHtml(r.address)}</td>`:''}
+            ${showCompany?`<td><small>${escapeHtml(r.compTxt)}</small></td>`:''}
+            ${showYin?`<td>${escapeHtml(r.yinTxt)}</td>`:''}
+            ${showCount?`<td>${r.count}</td>`:''}
+            ${showNote?`<td>${escapeHtml(r.note)}</td>`:''}
+            ${showPrice?`<td style="text-align:right;">${r.priceTxt}</td>`:''}
+          </tr>`;
+        });
+        html += `</tbody></table></div>`;
+      } else {
+        html += `<p style="color:#888;font-size:13px;">（無資料）</p></div>`;
+      }
+    });
+
+    html += `</div>`;
+    if(showStat){
+      html += `<div class="print-grand-total">總數量：<b>${overallCount}</b> 份 ｜ 總金額：<b>${formatMoney(overallTotal)}</b></div>`;
+    }
+
+  } else if(pMode === 'name'){
+    const targetVal = targetOverride || document.getElementById('p-name-target')?.value || '__ALL__';
+
+    if(targetVal.startsWith('MEMBER::')){
+      const parts = targetVal.split('::');
+      const recId = parts[1];
+      const memberName = parts[2];
+      const rec = activeRecords.find(r => r.id === recId);
+      if(rec){
+        const m = rec.members.find(x => x.name === memberName);
+        if(m){
+          let subtotal = 0;
+          let subtotalCount = 0;
+          let memberEntries = [];
+          const cats = Object.keys(rec.entries || {});
+
+          cats.forEach(catName => {
+            const item = rec.entries[catName];
+            if(item && item.members && item.members.includes(memberName)){
+              const unitP = (item.memberPrices && item.memberPrices[memberName] != null) ? item.memberPrices[memberName] : item.price;
+              const memCnt = (item.memberCounts && item.memberCounts[memberName] != null) ? item.memberCounts[memberName] : item.count;
+              const itemTot = unitP * memCnt;
+              subtotal += itemTot;
+              subtotalCount += memCnt;
+              memberEntries.push({ catName, count: memCnt, price: unitP, total: itemTot, note: item.note || '' });
+            }
+          });
+
+          const sum = getYinSummary(m);
+          const bTxt = formatBirthStr(m);
+          const yinStatusText = sum.debt > 0 ? formatYinStatus(m) : '—';
+          const phoneText = rec.phone ? `電話：${rec.phone}` : '';
+          const compTxt = (rec.companyName || rec.companyAddress) ? `公司：${escapeHtml(rec.companyName||'')} ${escapeHtml(rec.companyAddress?`(${rec.companyAddress})`:'' )}` : '';
+
+          html = `<div class="print-title-wrap"><p class="print-title">順天太子會【${activeDharmaEvent}】 - ${escapeHtml(m.name)} (個人明細)</p><p class="print-sub">列印日期：${new Date().toLocaleString('zh-TW')}</p></div><div class="print-content-container">`;
+          html += `<div class="print-section" style="margin-bottom:18px;">`;
+          html += `<h3>姓名：${escapeHtml(m.name)} <small style="color:#555;">(戶名：${escapeHtml(rec.name)} ｜ 稱謂：${escapeHtml(m.relation||'成員')})</small></h3>`;
+          
+          const metaParts = [];
+          if(showPhone && phoneText) metaParts.push(phoneText);
+          if(showZodiac && m.zodiac) metaParts.push(`生肖：${m.zodiac}`);
+          metaParts.push(`生日：${bTxt}`);
+          if(showId && m.idNumber) metaParts.push(`身分證：${m.idNumber}`);
+          if(showAddress && rec.address) metaParts.push(`地址：${rec.address}`);
+          if(showCompany && compTxt) metaParts.push(compTxt);
+          if(showYin && sum.debt > 0) metaParts.push(`陰債：${yinStatusText}`);
+          html += `<div class="print-meta">${escapeHtml(metaParts.join(' | '))}</div>`;
+
+          if(memberEntries.length > 0){
+            html += `<div style="margin-bottom:4px;font-size:12px;font-weight:bold;color:var(--seal-dark);">📋 登記項目：</div>`;
+            html += `<table><thead><tr><th style="width:35px;">序號</th><th>項目</th>${showCount?'<th style="width:45px;">數量</th>':''}${showNote?'<th>備註</th>':''}${showPrice?'<th style="text-align:right;">金額</th>':''}</tr></thead><tbody>`;
+            memberEntries.forEach((ent, idx) => {
+              html += `<tr><td>${idx+1}</td><td><b>${escapeHtml(ent.catName)}</b></td>${showCount?`<td>${ent.count}</td>`:''}${showNote?`<td>${escapeHtml(ent.note)}</td>`:''}${showPrice?`<td style="text-align:right;">${formatMoney(ent.total)}</td>`:''}</tr>`;
+            });
+            html += `</tbody></table>`;
+          } else {
+            html += `<p style="color:#888;font-size:13px;">（此成員未參與登記項目）</p>`;
+          }
+          html += `</div></div>`;
+          if(showStat){
+            html += `<div class="print-grand-total">總數量：<b>${subtotalCount}</b> 份 ｜ 總金額：<b>${formatMoney(subtotal)}</b></div>`;
+          }
+          return html;
+        }
+      }
+    }
+
+    let targetRecords = [];
+    let titleStr = '';
+
+    if(targetVal === '__ALL__'){
+      targetRecords = activeRecords.slice().sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant'));
+      titleStr = '全部名冊明細';
+    } else if(targetVal.startsWith('FAMILY::')){
+      const recId = targetVal.replace('FAMILY::', '');
+      targetRecords = activeRecords.filter(r => r.id === recId);
+      titleStr = targetRecords[0] ? `${targetRecords[0].name} 家庭總明細` : '';
+    } else if(targetVal.startsWith('SINGLE::')){
+      const recId = targetVal.replace('SINGLE::', '');
+      targetRecords = activeRecords.filter(r => r.id === recId);
+      titleStr = targetRecords[0] ? `${targetRecords[0].name} 個人明細` : '';
+    }
+
+    if(targetRecords.length === 0){ showToast('無資料可列印'); return null; }
+
+    html = `<div class="print-title-wrap"><p class="print-title">順天太子會【${activeDharmaEvent}】 - ${escapeHtml(titleStr)}</p><p class="print-sub">列印日期：${new Date().toLocaleString('zh-TW')}</p></div><div class="print-content-container">`;
+
+    let grandTotal = 0;
+    let grandTotalCount = 0;
+
+    targetRecords.forEach(rec => {
+      const cats = Object.keys(rec.entries || {});
+      const subtotal = recordTotal(rec.entries);
+      const subtotalCount = recordTotalCount(rec.entries);
+      grandTotal += subtotal;
+      grandTotalCount += subtotalCount;
+
+      html += `<div class="print-section" style="margin-bottom:18px;">`;
+
+      if(rec.mode === 'family'){
+        html += `<h3>戶名：${escapeHtml(rec.name)}（家庭登記）</h3>`;
+        const fMeta = [];
+        if(showPhone && rec.phone) fMeta.push(`戶長電話：${rec.phone}`);
+        if(showAddress && rec.address) fMeta.push(`住址：${rec.address}`);
+        if(showCompany && (rec.companyName || rec.companyAddress)) fMeta.push(`公司：${rec.companyName||''} ${rec.companyAddress?`(${rec.companyAddress})`:''}`);
+        if(fMeta.length) html += `<div class="print-meta">${escapeHtml(fMeta.join(' | '))}</div>`;
+
+        if(showFamilyMembers && rec.members && rec.members.length > 0){
+          html += `<div style="margin-bottom:4px;font-size:12px;font-weight:bold;color:var(--seal-dark);">👨‍👩‍👧‍👦 成員名冊：</div>`;
+          html += `<table style="margin-bottom:10px;"><thead><tr>
+            <th style="width:35px;">序號</th><th>姓名</th>
+            ${showRelationGroup?'<th>稱謂</th>':''}
+            ${showPhone?'<th>電話</th>':''}
+            ${showZodiac?'<th>生肖</th>':''}
+            <th>生日</th>
+            ${showId?'<th>身分證</th>':''}
+            ${showYin?'<th>陰債狀況</th>':''}
+          </tr></thead><tbody>`;
+
+          rec.members.forEach((m, mi) => {
+            const sum = getYinSummary(m);
+            const bTxt = formatBirthStr(m);
+            const yTxt = sum.debt > 0 ? formatYinStatus(m) : '—';
+
+            html += `<tr>
+              <td>${mi+1}</td><td><b>${escapeHtml(m.name)}</b></td>
+              ${showRelationGroup?`<td>${escapeHtml(m.relation||'成員')}</td>`:''}
+              ${showPhone?`<td>${escapeHtml(rec.phone||'—')}</td>`:''}
+              ${showZodiac?`<td>${escapeHtml(m.zodiac||'—')}</td>`:''}
+              <td>${escapeHtml(bTxt)}</td>
+              ${showId?`<td>${escapeHtml(m.idNumber||'—')}</td>`:''}
+              ${showYin?`<td>${yTxt}</td>`:''}
+            </tr>`;
+          });
+          html += `</tbody></table>`;
+        }
+      } else {
+        html += `<h3>姓名：${escapeHtml(rec.name)}</h3>`;
+        const metaParts = [];
+        if(showPhone && rec.phone) metaParts.push(`電話：${rec.phone}`);
+        if(showZodiac && rec.zodiac) metaParts.push(`生肖：${rec.zodiac}`);
+        metaParts.push(`生日：${formatBirthStr(rec)}`);
+        if(showId && rec.idNumber) metaParts.push(`身分證：${rec.idNumber}`);
+        if(showAddress && rec.address) metaParts.push(`地址：${rec.address}`);
+        if(showYin && Number(rec.yinDebt)>0) metaParts.push(`陰債：${formatYinStatus(rec)}`);
+        html += `<div class="print-meta">${escapeHtml(metaParts.join(' | '))}</div>`;
+      }
+
+      if(cats.length > 0){
+        html += `<div style="margin-bottom:4px;font-size:12px;font-weight:bold;color:var(--seal-dark);">📋 登記項目：</div>`;
+        html += `<table><thead><tr>
+          <th style="width:35px;">序號</th><th style="width:130px;">項目</th>
+          ${rec.mode==='family'?'<th style="width:160px;">參與成員</th>':''}
+          ${showCount?'<th style="width:45px;">數量</th>':''}
+          ${showNote?'<th>備註</th>':''}
+          ${showPrice?'<th style="text-align:right;">金額</th>':''}
+        </tr></thead><tbody>`;
+
+        cats.forEach((catName, idx) => {
+          const item = rec.entries[catName] || {};
+          const itemTot = getItemEntryTotal(item);
+          const itemCnt = getItemEntryCount(item);
+          let memBadges = item.members && item.members.length ? item.members.join(', ') : '全戶共用';
+
+          html += `<tr>
+            <td>${idx+1}</td><td><b>${escapeHtml(catName)}</b></td>
+            ${rec.mode==='family'?`<td><small>${escapeHtml(memBadges)}</small></td>`:''}
+            ${showCount?`<td>${itemCnt}</td>`:''}
+            ${showNote?`<td>${escapeHtml(item.note||'')}</td>`:''}
+            ${showPrice?`<td style="text-align:right;">${formatMoney(itemTot)}</td>`:''}
+          </tr>`;
+        });
+        html += `</tbody></table>`;
+      }
+      html += `</div>`;
+    });
+
+    html += `</div>`;
+    if(showStat && targetVal === '__ALL__'){
+      html += `<div class="print-grand-total">總數量：<b>${grandTotalCount}</b> 份 ｜ 總金額：<b>${formatMoney(grandTotal)}</b></div>`;
+    }
+  }
+
+  return html;
+}
+
+// 列印按鈕綁定
+document.getElementById('btn-gen').addEventListener('click', ()=>{
+  const html = generateDharmaPrintContent('cat');
+  if(!html) return;
+  document.getElementById('p-preview').innerHTML = `<div class="detail-card">${html}</div>`;
+  document.getElementById('print-area').innerHTML = html;
+  showToast('已產生預覽');
+});
+
+document.getElementById('btn-print').addEventListener('click', ()=>{
+  const html = generateDharmaPrintContent('cat');
+  if(!html) return;
+  document.getElementById('print-area').innerHTML = html;
+  window.print();
+});
+
+document.getElementById('btn-gen-name').addEventListener('click', ()=>{
+  const targetVal = document.getElementById('p-name-target').value;
+  const html = generateDharmaPrintContent('name', targetVal);
+  if(!html) return;
+  document.getElementById('p-preview').innerHTML = `<div class="detail-card">${html}</div>`;
+  document.getElementById('print-area').innerHTML = html;
+  showToast('已產生預覽');
+});
+
+document.getElementById('btn-print-name').addEventListener('click', ()=>{
+  const targetVal = document.getElementById('p-name-target').value;
+  const html = generateDharmaPrintContent('name', targetVal);
+  if(!html) return;
+  document.getElementById('print-area').innerHTML = html;
+  window.print();
+});
+
+document.getElementById('btn-gen-yin').addEventListener('click', ()=>{
+  const html = generateDharmaPrintContent();
+  if(!html) return;
+  document.getElementById('p-preview').innerHTML = `<div class="detail-card">${html}</div>`;
+  document.getElementById('print-area').innerHTML = html;
+  showToast('已產生預覽');
+});
+
+document.getElementById('btn-print-yin').addEventListener('click', ()=>{
+  const html = generateDharmaPrintContent();
+  if(!html) return;
+  document.getElementById('print-area').innerHTML = html;
+  window.print();
+});
+
+function exportBackup(type){
+  const payload = {
+    exportType: type, dharmaEvents, activeDharmaEvent, pilgrimageEvents, activePilgrimageEvent,
+    donationEvents, activeDonationEvent, categories, prices, zodiacYin, fontScale,
+    records, pilgrimages, donations, customDonationItems, carPlatesMap, customCarsMap, exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = `順天太子會_完整備份_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  showToast('已匯出備份');
+}
+
+function importBackup(file){
+  const reader = new FileReader();
+  reader.onload = async (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data){ showToast('格式不正確'); return; }
+      
+      if(data.allEventsData){
+        const evKeys = Object.keys(data.allEventsData);
+        if(evKeys.length > 0){
+          dharmaEvents = evKeys;
+          activeDharmaEvent = evKeys[0];
+          records = [];
+          evKeys.forEach(ev => {
+            const evData = data.allEventsData[ev];
+            if(evData.records){
+              evData.records.forEach(r => {
+                records.push({ ...r, event: ev, phone: r.phone || '', rocBirth: formatRocBirth(r.rocBirth || r.birth || '') });
+              });
+            }
+          });
+        }
+      } else if(Array.isArray(data.records)){
+        records = data.records.map(r => ({ ...r, phone: r.phone || '', rocBirth: formatRocBirth(r.rocBirth || r.birth || '') }));
+      }
+
+      if(data.pilgrimageList && Array.isArray(data.pilgrimageList)){
+        pilgrimages = data.pilgrimageList.map(p => ({
+          ...p,
+          event: pilgrimageEvents[0],
+          birth: formatRocBirth(p.birth || p.rocBirth || '')
+        }));
+      } else if(data.pilgrimages && Array.isArray(data.pilgrimages)){
+        pilgrimages = data.pilgrimages.map(p => ({ ...p, birth: formatRocBirth(p.birth || '') }));
+      }
+
+      if(data.donations) donations = data.donations;
+      if(data.categories) categories = data.categories;
+      if(data.prices) prices = data.prices;
+      if(data.carPlatesMap) carPlatesMap = data.carPlatesMap;
+      if(data.customCarsMap) customCarsMap = data.customCarsMap;
+
+      await saveDataAll();
+      loadData();
+      renderCatGrid({});
+      renderRecordTable();
+      renderPilgTable();
+      renderDonationTable();
+      showToast('匯入成功並已自動轉換格式');
+    }catch(err){ console.error(err); showToast('讀取失敗'); }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('btn-export-full').addEventListener('click', ()=>exportBackup('full'));
+document.getElementById('btn-export-base').addEventListener('click', ()=>exportBackup('base'));
+document.getElementById('btn-import-trigger').addEventListener('click', ()=>document.getElementById('btn-import').click());
+document.getElementById('btn-import').addEventListener('change', (e)=>{ if(e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; });
+
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    ['input','pilgrimage','donation','search','print','cloud'].forEach(t=>{
+      document.getElementById('tab-'+t).style.display = (t===btn.dataset.tab)?'block':'none';
+    });
+    if(btn.dataset.tab==='search') renderSearchTab();
+    if(btn.dataset.tab==='print') renderPrintTab();
+    if(btn.dataset.tab==='pilgrimage') renderPilgTable();
+    if(btn.dataset.tab==='donation') renderDonationTable();
+  });
+});
+
+(async function init(){
+  await loadData();
+  renderCatGrid({});
+  renderRecordTable();
+  renderPilgTable();
+  renderDonationTable();
+})();
+</script>
+</body>
+</html>
