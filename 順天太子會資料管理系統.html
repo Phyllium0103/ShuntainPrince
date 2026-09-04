@@ -386,9 +386,8 @@
 
         <!-- 家庭模式專用區塊 -->
         <div id="section-family-mode" style="display:none;">
-          <div class="grid-3">
+          <div class="grid-2">
             <label class="field"><span class="lbl">戶名 / 戶長代表姓名 *</span><input type="text" id="f-fam-head" placeholder="例如：王小明 戶"></label>
-            <label class="field"><span class="lbl">戶長連絡電話 (選填)</span><input type="text" id="f-fam-phone" placeholder="例如：0912345678"></label>
             <label class="field"><span class="lbl">全家共用住址</span><input type="text" id="f-fam-address" placeholder="請輸入共同居住地址"></label>
           </div>
 
@@ -398,7 +397,7 @@
           </div>
           <div style="margin-bottom:18px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-              <span style="font-weight:bold;color:var(--seal-dark);font-size:0.9rem;">家庭成員名冊</span>
+              <span style="font-weight:bold;color:var(--seal-dark);font-size:0.9rem;">家庭成員名冊（每位成員皆可獨立設定電話）</span>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-add-member">＋ 新增家庭成員</button>
             </div>
             <div id="family-members-container"></div>
@@ -858,19 +857,19 @@ const SB_URL = 'https://ayjzsqysvlulhwwucpxb.supabase.co';
 const SB_KEY = 'sb_publishable_zS_cX8pAy6_iLeHEmn-XJg_BLaSJYoK';
 let sbClient = null;
 
-const LS_CATS = 'faliao_categories_v46';
-const LS_RECORDS = 'faliao_records_v46';
-const LS_PRICES = 'faliao_prices_v46';
-const LS_ZODIAC_YIN = 'faliao_zodiac_yin_v46';
-const LS_FONT_SCALE = 'faliao_font_scale_v46';
-const LS_DHARMA_EVENTS = 'faliao_dharma_events_v46';
-const LS_PILG_EVENTS = 'faliao_pilg_events_v46';
-const LS_DON_EVENTS = 'faliao_don_events_v46';
-const LS_PILG_RECORDS = 'faliao_pilg_records_v46';
-const LS_DONATIONS = 'faliao_donations_v46';
-const LS_DON_ITEMS = 'faliao_don_items_v46';
-const LS_CAR_PLATES = 'faliao_car_plates_v46';
-const LS_CUSTOM_CARS = 'faliao_custom_cars_v46';
+const LS_CATS = 'faliao_categories_v47';
+const LS_RECORDS = 'faliao_records_v47';
+const LS_PRICES = 'faliao_prices_v47';
+const LS_ZODIAC_YIN = 'faliao_zodiac_yin_v47';
+const LS_FONT_SCALE = 'faliao_font_scale_v47';
+const LS_DHARMA_EVENTS = 'faliao_dharma_events_v47';
+const LS_PILG_EVENTS = 'faliao_pilg_events_v47';
+const LS_DON_EVENTS = 'faliao_don_events_v47';
+const LS_PILG_RECORDS = 'faliao_pilg_records_v47';
+const LS_DONATIONS = 'faliao_donations_v47';
+const LS_DON_ITEMS = 'faliao_don_items_v47';
+const LS_CAR_PLATES = 'faliao_car_plates_v47';
+const LS_CUSTOM_CARS = 'faliao_custom_cars_v47';
 
 // 智慧生日轉換與精準生肖計算核心邏輯
 function parseDateAny(str) {
@@ -1502,7 +1501,7 @@ document.getElementById('btn-add-repay').addEventListener('click', ()=>{
 });
 
 function addFamilyMember(data){
-  const m = data || { id: uid(), name: '', idNumber: '', relation: '', zodiac: '', solarBirth: '', rocBirth: '', lunarBirth: '', yinDebt: 0, repays: [] };
+  const m = data || { id: uid(), name: '', phone: '', idNumber: '', relation: '', zodiac: '', solarBirth: '', rocBirth: '', lunarBirth: '', yinDebt: 0, repays: [] };
   tempFamilyMembers.push(m);
   renderFamilyMembers();
   renderCatGrid(collectCurrentEntries());
@@ -1534,17 +1533,18 @@ function renderFamilyMembers(){
         </div>
         <div class="grid-4">
           <label class="field" style="margin-bottom:8px;"><span class="lbl">成員姓名 *</span><input type="text" value="${escapeAttr(m.name)}" oninput="tempFamilyMembers[${idx}].name=this.value; renderCatGrid(collectCurrentEntries());" placeholder="姓名"></label>
+          <label class="field" style="margin-bottom:8px;"><span class="lbl">連絡電話</span><input type="text" value="${escapeAttr(m.phone||'')}" oninput="tempFamilyMembers[${idx}].phone=this.value" placeholder="0912345678"></label>
           <label class="field" style="margin-bottom:8px;"><span class="lbl">身分證字號</span><input type="text" value="${escapeAttr(m.idNumber||'')}" oninput="tempFamilyMembers[${idx}].idNumber=this.value" placeholder="身分證"></label>
           <label class="field" style="margin-bottom:8px;"><span class="lbl">稱謂/關係</span><input type="text" value="${escapeAttr(m.relation||'')}" oninput="tempFamilyMembers[${idx}].relation=this.value" placeholder="如：長子"></label>
+        </div>
+        <div class="grid-3" style="margin-top:4px;">
           <label class="field" style="margin-bottom:8px;"><span class="lbl">生肖 / 陰債</span><select onchange="onMemberZodiacChange(${idx}, this.value)">${zodiacOpts}</select></label>
+          <label class="field" style="margin-bottom:8px;"><span class="lbl">欠陰債貫數</span><input type="number" value="${m.yinDebt||''}" oninput="tempFamilyMembers[${idx}].yinDebt=Number(this.value)" placeholder="0"></label>
         </div>
         <div class="grid-3" style="margin-top:4px;">
           <label class="field" style="margin-bottom:8px;"><span class="lbl">國曆生日 (自動同步)</span><input type="text" value="${m.solarBirth||''}" onblur="updateFamilyMemberDate(${idx}, 'solar', this.value)" placeholder="1966/10/06"></label>
           <label class="field" style="margin-bottom:8px;"><span class="lbl">民國生日 (自動同步)</span><input type="text" value="${escapeAttr(m.rocBirth||'')}" onblur="updateFamilyMemberDate(${idx}, 'roc', this.value)" placeholder="55/10/06"></label>
           <label class="field" style="margin-bottom:8px;"><span class="lbl">農曆生日 (自動同步)</span><input type="text" value="${escapeAttr(m.lunarBirth||'')}" onblur="updateFamilyMemberDate(${idx}, 'lunar', this.value)" placeholder="55/09/03"></label>
-        </div>
-        <div class="grid-2" style="margin-top:4px;">
-          <label class="field" style="margin-bottom:8px;"><span class="lbl">欠陰債貫數</span><input type="number" value="${m.yinDebt||''}" oninput="tempFamilyMembers[${idx}].yinDebt=Number(this.value)" placeholder="0"></label>
         </div>
         <div style="font-size:0.75rem;color:var(--ink-soft);margin-top:6px;">還款紀錄：<button type="button" class="btn btn-ghost btn-sm" style="padding:1px 6px;margin-left:6px;" onclick="addMemberRepay(${idx})">＋ 還款</button></div>
         ${repaysHtml}
@@ -1812,7 +1812,6 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
   } else {
     const famHead = document.getElementById('f-fam-head').value.trim();
     if(!famHead){ showToast('請輸入戶名或戶長姓名'); return; }
-    const famPhone = document.getElementById('f-fam-phone').value.trim();
     const famAddress = document.getElementById('f-fam-address').value.trim();
     const famCompanyName = document.getElementById('f-fam-company-name').value.trim();
     const famCompanyAddress = document.getElementById('f-fam-company-address').value.trim();
@@ -1822,7 +1821,7 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
     if(editingId){
       const rec = records.find(r=>r.id===editingId);
       if(rec){
-        rec.event = activeDharmaEvent; rec.mode = 'family'; rec.name = famHead; rec.phone = famPhone;
+        rec.event = activeDharmaEvent; rec.mode = 'family'; rec.name = famHead; rec.phone = '';
         rec.address = famAddress; rec.companyName = famCompanyName; rec.companyAddress = famCompanyAddress;
         rec.members = JSON.parse(JSON.stringify(tempFamilyMembers));
         rec.entries = entries; rec.yinDebt = 0; rec.repays = [];
@@ -1830,7 +1829,7 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
       showToast('已更新家庭戶頭資料');
     } else {
       records.push({
-        id: uid(), event: activeDharmaEvent, mode: 'family', name: famHead, phone: famPhone, address: famAddress,
+        id: uid(), event: activeDharmaEvent, mode: 'family', name: famHead, phone: '', address: famAddress,
         companyName: famCompanyName, companyAddress: famCompanyAddress,
         members: JSON.parse(JSON.stringify(tempFamilyMembers)), entries, createdAt: Date.now()
       });
@@ -1865,7 +1864,6 @@ function resetForm(){
   renderSingleRepayInputs();
 
   document.getElementById('f-fam-head').value = '';
-  document.getElementById('f-fam-phone').value = '';
   document.getElementById('f-fam-address').value = '';
   document.getElementById('f-fam-company-name').value = '';
   document.getElementById('f-fam-company-address').value = '';
@@ -1887,7 +1885,6 @@ function startEdit(id){
   if(rec.mode === 'family'){
     switchMode('family');
     document.getElementById('f-fam-head').value = rec.name;
-    document.getElementById('f-fam-phone').value = rec.phone || '';
     document.getElementById('f-fam-address').value = rec.address || '';
     document.getElementById('f-fam-company-name').value = rec.companyName || '';
     document.getElementById('f-fam-company-address').value = rec.companyAddress || '';
@@ -1967,8 +1964,8 @@ function renderRecordTable(){
     const compTxt = (rec.companyName || rec.companyAddress) ? `<br><small style="color:var(--gold);">🏢 ${escapeHtml(rec.companyName||'')} ${escapeHtml(rec.companyAddress?`(${rec.companyAddress})`:'' )}</small>` : '';
 
     if(rec.mode === 'family'){
-      const memList = (rec.members || []).map(m => `• <b>${escapeHtml(m.name)}</b> ${m.idNumber?`(${escapeHtml(m.idNumber)})`:''} ${m.relation?`[${m.relation}]`:''}`).join('<br>');
-      nameCol = `<span class="type-tag">家庭</span><b>${escapeHtml(rec.name)}</b><div style="font-size:11px;color:var(--gold);margin-top:2px;">📞 ${escapeHtml(rec.phone||'無電話')}</div><div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">${memList}</div>`;
+      const memList = (rec.members || []).map(m => `• <b>${escapeHtml(m.name)}</b> ${m.phone?`[📞 ${escapeHtml(m.phone)}]`:''} ${m.idNumber?`(${escapeHtml(m.idNumber)})`:''} ${m.relation?`[${m.relation}]`:''}`).join('<br>');
+      nameCol = `<span class="type-tag">家庭</span><b>${escapeHtml(rec.name)}</b><div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">${memList}</div>`;
       metaCol = `<span style="font-size:12px;color:var(--ink-soft);">住址：${escapeHtml(rec.address || '—')}${compTxt}</span>`;
       const yinPieces = (rec.members || []).filter(m => Number(m.yinDebt) > 0).map(m => `${escapeHtml(m.name)}: ${formatYinStatus(m)}`);
       yinCol = yinPieces.length ? `<span style="font-size:11px;">${yinPieces.join('<br>')}</span>` : '—';
@@ -2125,7 +2122,7 @@ function updatePilgImportSelect(){
   const sel = document.getElementById('pilg-import-select');
   if(!sel) return;
   const activeRecords = records.filter(r => (r.event || dharmaEvents[0]) === activeDharmaEvent);
-  let html = `<option value="">-- 請選擇既有名冊人員帶入 --</option>`;
+  let html = `<option value="">-- 請選擇既有名冊人員快速帶入 --</option>`;
   activeRecords.forEach(r => {
     if(r.mode === 'single') html += `<option value="single::${r.id}">${escapeHtml(r.name)} (個人)</option>`;
     else if(r.members) r.members.forEach(m => html += `<option value="member::${r.id}::${escapeAttr(m.name)}">${escapeHtml(m.name)} (來自戶頭：${escapeHtml(r.name)})</option>`);
@@ -2153,7 +2150,7 @@ document.getElementById('pilg-import-select').addEventListener('change', (e)=>{
       if(m){
         document.getElementById('pilg-name').value = m.name;
         document.getElementById('pilg-id-number').value = m.idNumber || '';
-        document.getElementById('pilg-phone').value = rec.phone || '';
+        document.getElementById('pilg-phone').value = m.phone || '';
         document.getElementById('pilg-roc-birth').value = m.rocBirth || m.solarBirth || '';
         showToast(`已帶入成員「${m.name}」`);
       }
@@ -2162,7 +2159,7 @@ document.getElementById('pilg-import-select').addEventListener('change', (e)=>{
   e.target.value = '';
 });
 
-// 儲存進香人員，智慧同名合併至法會登記
+// 儲存進香人員，智慧同名合併至法會登記 (支援個人或家庭成員)
 document.getElementById('btn-pilg-save').addEventListener('click', async ()=>{
   const name = document.getElementById('pilg-name').value.trim();
   const phone = document.getElementById('pilg-phone').value.trim();
@@ -2186,32 +2183,30 @@ document.getElementById('btn-pilg-save').addEventListener('click', async ()=>{
     showToast('已新增進香人員');
   }
 
-  // 智慧同名合併邏輯 (檢查個人登記與家庭成員)
+  // 智慧同名合併邏輯：檢查法會登記是否有同名個人或家庭成員
   const activeDharmaRecords = records.filter(r => (r.event || dharmaEvents[0]) === activeDharmaEvent);
   let matched = false;
 
   for(let rec of activeDharmaRecords){
     if(rec.mode === 'single' && rec.name === name){
-      // 合併個人登記
       if(phone && !rec.phone) rec.phone = phone;
       if(idNumber && !rec.idNumber) rec.idNumber = idNumber;
       if(birth && !rec.rocBirth) rec.rocBirth = birth;
       matched = true;
       break;
     } else if(rec.mode === 'family' && rec.members){
-      // 檢查家庭成員中是否有同名者
       let mem = rec.members.find(m => m.name === name);
       if(mem){
+        if(phone && !mem.phone) mem.phone = phone;
         if(idNumber && !mem.idNumber) mem.idNumber = idNumber;
         if(birth && !mem.rocBirth) mem.rocBirth = birth;
-        if(phone && !rec.phone) rec.phone = phone;
         matched = true;
         break;
       }
     }
   }
 
-  // 若完全沒有同名資料，則新增一筆個人登記
+  // 若完全沒有同名者，新增一筆個人登記
   if(!matched){
     records.push({
       id: uid(), event: activeDharmaEvent, mode: 'single', name, phone, idNumber,
@@ -2459,7 +2454,7 @@ document.getElementById('don-import-select').addEventListener('change', (e)=>{
       const m = rec.members.find(x => x.name === parts[2]);
       if(m){
         document.getElementById('don-name').value = m.name;
-        document.getElementById('don-phone').value = rec.phone || '';
+        document.getElementById('don-phone').value = m.phone || '';
         document.getElementById('don-address').value = rec.address || '';
         showToast(`已帶入成員「${m.name}」捐款人資料`);
       }
@@ -3026,7 +3021,6 @@ function generateDharmaPrintContent(modeOverride, targetOverride){
         const e = rec.entries[cat] || {};
         const isFam = rec.mode === 'family';
         const compTxt = (rec.companyName || rec.companyAddress) ? `${escapeHtml(rec.companyName||'')} ${escapeHtml(rec.companyAddress?`(${rec.companyAddress})`:'' )}` : '—';
-        const recPhone = rec.phone || '—';
 
         if(isFam){
           let targetMembers = (e.members && e.members.length > 0) ? rec.members.filter(m => e.members.includes(m.name)) : rec.members;
@@ -3045,7 +3039,7 @@ function generateDharmaPrintContent(modeOverride, targetOverride){
             expandedRows.push({
               name: m.name,
               relationGroupTxt: `${escapeHtml(m.relation?`[${m.relation}] `:'' )}戶頭：${escapeHtml(rec.name)}`,
-              phone: recPhone,
+              phone: m.phone || '—',
               zodiac: m.zodiac || '—',
               birthTxt: bTxt,
               idNumber: m.idNumber || '—',
@@ -3068,7 +3062,7 @@ function generateDharmaPrintContent(modeOverride, targetOverride){
           expandedRows.push({
             name: rec.name,
             relationGroupTxt: '個人',
-            phone: recPhone,
+            phone: rec.phone || '—',
             zodiac: rec.zodiac || '—',
             birthTxt: bTxt,
             idNumber: rec.idNumber || '—',
@@ -3164,7 +3158,7 @@ function generateDharmaPrintContent(modeOverride, targetOverride){
           const sum = getYinSummary(m);
           const bTxt = formatBirthStr(m);
           const yinStatusText = sum.debt > 0 ? formatYinStatus(m) : '—';
-          const phoneText = rec.phone ? `電話：${rec.phone}` : '';
+          const phoneText = m.phone ? `電話：${m.phone}` : '';
           const compTxt = (rec.companyName || rec.companyAddress) ? `公司：${escapeHtml(rec.companyName||'')} ${escapeHtml(rec.companyAddress?`(${rec.companyAddress})`:'' )}` : '';
 
           html = `<div class="print-title-wrap"><p class="print-title">順天太子會【${activeDharmaEvent}】 - ${escapeHtml(m.name)} (個人明細)</p><p class="print-sub">列印日期：${new Date().toLocaleString('zh-TW')}</p></div><div class="print-content-container">`;
@@ -3235,7 +3229,6 @@ function generateDharmaPrintContent(modeOverride, targetOverride){
       if(rec.mode === 'family'){
         html += `<h3>戶名：${escapeHtml(rec.name)}（家庭登記）</h3>`;
         const fMeta = [];
-        if(showPhone && rec.phone) fMeta.push(`戶長電話：${rec.phone}`);
         if(showAddress && rec.address) fMeta.push(`住址：${rec.address}`);
         if(showCompany && (rec.companyName || rec.companyAddress)) fMeta.push(`公司：${rec.companyName||''} ${rec.companyAddress?`(${rec.companyAddress})`:''}`);
         if(fMeta.length) html += `<div class="print-meta">${escapeHtml(fMeta.join(' | '))}</div>`;
@@ -3260,7 +3253,7 @@ function generateDharmaPrintContent(modeOverride, targetOverride){
             html += `<tr>
               <td>${mi+1}</td><td><b>${escapeHtml(m.name)}</b></td>
               ${showRelationGroup?`<td>${escapeHtml(m.relation||'成員')}</td>`:''}
-              ${showPhone?`<td>${escapeHtml(rec.phone||'—')}</td>`:''}
+              ${showPhone?`<td>${escapeHtml(m.phone||'—')}</td>`:''}
               ${showZodiac?`<td>${escapeHtml(m.zodiac||'—')}</td>`:''}
               <td>${escapeHtml(bTxt)}</td>
               ${showId?`<td>${escapeHtml(m.idNumber||'—')}</td>`:''}
